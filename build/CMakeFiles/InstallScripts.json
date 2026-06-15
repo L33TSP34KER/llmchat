@@ -1,7 +1,0 @@
-{
-	"InstallScripts" : 
-	[
-		"/run/media/wyene/disk/project/llmchat/build/cmake_install.cmake"
-	],
-	"Parallel" : false
-}
