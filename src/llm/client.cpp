@@ -1,6 +1,7 @@
 #include "client.h"
 #include "tool_exec.h"
 #include "http_client.h"
+#include "mcp/manager.h"
 #include <thread>
 #include <iostream>
 
@@ -328,7 +329,9 @@ void LlmClient::process_message(const std::string& content, const std::string& s
 
                 std::string result;
                 if (tool_exec::is_mcp_tool(ptc.name)) {
-                    result = "Error: MCP tools must be executed via MCPManager";
+                    result = mcp_manager_
+                        ? mcp_manager_->execute_tool(ptc.name, ptc.arguments)
+                        : "Error: MCP manager not available";
                 } else {
                     result = tool_exec::execute_shell(*tool_def, ptc.arguments);
                 }
@@ -501,7 +504,9 @@ void LlmClient::process_message_deep_search(const std::string& content) {
                 } else {
                     std::string result;
                     if (tool_exec::is_mcp_tool(ptc.name)) {
-                        result = "Error: MCP tools must be executed via MCPManager";
+                        result = mcp_manager_
+                            ? mcp_manager_->execute_tool(ptc.name, ptc.arguments)
+                            : "Error: MCP manager not available";
                     } else {
                         result = tool_exec::execute_shell(*tool_def, ptc.arguments);
                     }

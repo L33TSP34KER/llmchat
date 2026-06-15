@@ -42,6 +42,8 @@ struct QueuedMessage {
     std::string skill_override;
 };
 
+class MCPManager;
+
 class LlmClient {
 public:
     using StreamCallback = std::function<void(const StreamEvent&)>;
@@ -50,6 +52,7 @@ public:
     ~LlmClient();
 
     void set_stream_callback(StreamCallback cb);
+    void set_mcp_manager(MCPManager* mgr) { mcp_manager_ = mgr; }
     void send_message(const std::string& content, const std::string& skill_override = "");
     void enqueue_message(const std::string& content, const std::string& skill_override = "");
     void add_system_message(const std::string& content);
@@ -62,9 +65,11 @@ public:
     bool is_deep_search() const { return deep_search_; }
     const std::vector<Message>& get_messages() const { return messages_; }
     std::vector<Message>& get_messages() { return messages_; }
+    int estimate_total_chars() const;
 
 private:
     Config* config_;
+    MCPManager* mcp_manager_ = nullptr;
     std::unique_ptr<LLMProvider> provider_;
     std::vector<Message> messages_;
     std::queue<QueuedMessage> msg_queue_;
@@ -83,7 +88,6 @@ private:
     void process_message(const std::string& content, const std::string& skill_override);
     void process_message_deep_search(const std::string& content);
     std::string build_payload(const std::vector<Message>& history, bool include_tools);
-    int estimate_total_chars() const;
     bool check_compress_needed() const;
     void maybe_compress();
 };

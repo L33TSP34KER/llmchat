@@ -144,7 +144,11 @@ CMakeFiles/llmchat.dir/src/main.cpp.o: \
  /usr/include/c++/15.2.1/bits/locale_facets.tcc \
  /usr/include/c++/15.2.1/bits/basic_ios.tcc \
  /usr/include/c++/15.2.1/bits/ostream.tcc /usr/include/c++/15.2.1/istream \
- /usr/include/c++/15.2.1/bits/istream.tcc /usr/include/c++/15.2.1/csignal \
+ /usr/include/c++/15.2.1/bits/istream.tcc /usr/include/c++/15.2.1/fstream \
+ /usr/include/c++/15.2.1/bits/codecvt.h \
+ /usr/include/c++/15.2.1/x86_64-pc-linux-gnu/bits/basic_file.h \
+ /usr/include/c++/15.2.1/x86_64-pc-linux-gnu/bits/c++io.h \
+ /usr/include/c++/15.2.1/bits/fstream.tcc /usr/include/c++/15.2.1/csignal \
  /usr/include/signal.h /usr/include/bits/signum-generic.h \
  /usr/include/bits/signum-arch.h /usr/include/bits/types/sig_atomic_t.h \
  /usr/include/bits/types/siginfo_t.h /usr/include/bits/types/__sigval_t.h \
@@ -277,7 +281,7 @@ CMakeFiles/llmchat.dir/src/main.cpp.o: \
  /usr/include/c++/15.2.1/bits/locale_facets_nonio.h \
  /usr/include/c++/15.2.1/x86_64-pc-linux-gnu/bits/time_members.h \
  /usr/include/c++/15.2.1/x86_64-pc-linux-gnu/bits/messages_members.h \
- /usr/include/libintl.h /usr/include/c++/15.2.1/bits/codecvt.h \
+ /usr/include/libintl.h \
  /usr/include/c++/15.2.1/bits/locale_facets_nonio.tcc \
  /usr/include/c++/15.2.1/bits/locale_conv.h \
  /usr/include/c++/15.2.1/iomanip \
@@ -313,13 +317,9 @@ CMakeFiles/llmchat.dir/src/main.cpp.o: \
  /usr/include/nlohmann/ordered_map.hpp /usr/include/c++/15.2.1/any \
  /usr/include/nlohmann/detail/macro_unscope.hpp \
  /usr/include/nlohmann/thirdparty/hedley/hedley_undef.hpp \
- /usr/include/c++/15.2.1/fstream \
- /usr/include/c++/15.2.1/x86_64-pc-linux-gnu/bits/basic_file.h \
- /usr/include/c++/15.2.1/x86_64-pc-linux-gnu/bits/c++io.h \
- /usr/include/c++/15.2.1/bits/fstream.tcc /usr/include/sys/stat.h \
- /usr/include/bits/stat.h /usr/include/bits/struct_stat.h \
- /usr/include/bits/statx.h /usr/include/linux/stat.h \
- /usr/include/bits/statx-generic.h \
+ /usr/include/sys/stat.h /usr/include/bits/stat.h \
+ /usr/include/bits/struct_stat.h /usr/include/bits/statx.h \
+ /usr/include/linux/stat.h /usr/include/bits/statx-generic.h \
  /usr/include/bits/types/struct_statx_timestamp.h \
  /usr/include/bits/types/struct_statx.h /usr/include/pwd.h \
  /run/media/wyene/disk/project/llmchat/src/llm/client.h \

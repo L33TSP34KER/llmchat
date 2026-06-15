@@ -814,6 +814,8 @@ CMakeFiles/llmchat.dir/src/llm/client.cpp.o: /run/media/wyene/disk/project/llmch
   /run/media/wyene/disk/project/llmchat/src/llm/client.h \
   /run/media/wyene/disk/project/llmchat/src/llm/provider.h \
   /run/media/wyene/disk/project/llmchat/src/llm/tool_exec.h \
+  /run/media/wyene/disk/project/llmchat/src/mcp/client.h \
+  /run/media/wyene/disk/project/llmchat/src/mcp/manager.h \
   /usr/include/alloca.h \
   /usr/include/asm-generic/bitsperlong.h \
   /usr/include/asm-generic/errno-base.h \
@@ -6299,6 +6301,8 @@ CMakeFiles/llmchat.dir/src/ui/renderer.cpp.o:
 
 /run/media/wyene/disk/project/llmchat/src/llm/tool_exec.h:
 
+/run/media/wyene/disk/project/llmchat/src/mcp/client.h:
+
 /usr/include/c++/15.2.1/atomic:
 
 /usr/include/c++/15.2.1/bits/valarray_before.h:
@@ -6352,8 +6356,6 @@ CMakeFiles/llmchat.dir/src/ui/renderer.cpp.o:
 /usr/include/linux/openat2.h:
 
 /usr/include/sys/poll.h:
-
-/run/media/wyene/disk/project/llmchat/src/mcp/client.h:
 
 /run/media/wyene/disk/project/llmchat/src/ui/animation.h:
 

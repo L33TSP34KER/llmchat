@@ -33,6 +33,7 @@ public:
     void run();
     void stop();
     void set_state(const UIState& state);
+    void set_status_text(const std::string& text);
     void set_send_callback(SendCallback cb);
     void set_deep_search_callback(DeepSearchCallback cb);
     void set_clear_callback(ClearCallback cb);
@@ -108,6 +109,7 @@ private:
     void scroll_up(int lines);
     void scroll_down(int lines);
     bool is_at_bottom();
+    void update_input_height();
 
     // Casino status
     void update_casino_status();

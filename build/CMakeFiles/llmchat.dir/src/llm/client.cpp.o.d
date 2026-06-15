@@ -336,4 +336,6 @@ CMakeFiles/llmchat.dir/src/llm/client.cpp.o: \
  /usr/local/include/curl/curl.h /usr/local/include/curl/urlapi.h \
  /usr/local/include/curl/options.h /usr/local/include/curl/header.h \
  /usr/local/include/curl/websockets.h \
- /run/media/wyene/disk/project/llmchat/src/llm/tool_exec.h
+ /run/media/wyene/disk/project/llmchat/src/llm/tool_exec.h \
+ /run/media/wyene/disk/project/llmchat/src/mcp/manager.h \
+ /run/media/wyene/disk/project/llmchat/src/mcp/client.h

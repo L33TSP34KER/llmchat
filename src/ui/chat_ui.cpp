@@ -103,6 +103,10 @@ void ChatUI::destroy_windows() {
     chat_win_ = input_win_ = status_win_ = nullptr;
 }
 
+void ChatUI::set_status_text(const std::string& text) {
+    state_.status_text = text;
+}
+
 void ChatUI::handle_resize() {
     destroy_windows();
     endwin();
@@ -134,7 +138,15 @@ void ChatUI::draw_all() {
     }
 
     renderer_.draw_chat(conv_, scroll_offset_, state_.processing, animation_.get_color_index(), tamagotchi_mood_, anim_frame_);
-    renderer_.draw_input(input_buf_, cursor_pos_, state_.processing, animation_.get_color_index(), anim_frame_);
+    {
+        auto entries = conv_->get_entries();
+        int non_system = 0;
+        for (auto& e : entries) {
+            if (e.type == ConversationEntry::USER || e.type == ConversationEntry::ASSISTANT)
+                non_system++;
+        }
+        renderer_.draw_input(input_buf_, cursor_pos_, state_.processing, animation_.get_color_index(), anim_frame_, non_system);
+    }
     renderer_.draw_status(state_.processing, use_casino_status_, casino_frame_,
                           state_.model_name, state_.status_text);
     doupdate();
@@ -222,10 +234,19 @@ void ChatUI::handle_input(int ch) {
         case KEY_MOUSE: {
             MEVENT event;
             if (getmouse(&event) == OK) {
-                if (event.bstate & BUTTON4_PRESSED) {
-                    scroll_up(3);
+                if (event.bstate & BUTTON1_CLICKED) {
+                    // Check if click is on tamagotchi (top-right corner)
+                    int face_w = 5; // approximate face width
+                    if (event.y == 0 && event.x >= term_width_ - face_w - 4 &&
+                        event.x < term_width_ - 2) {
+                        tamagotchi_mood_ = TAMAGOTCHI_HAPPY;
+                        state_.status_text = "*pet*";
+                        last_input_time_ = std::chrono::steady_clock::now();
+                    }
+                } else if (event.bstate & BUTTON4_PRESSED) {
+                    scroll_up(1);
                 } else if (event.bstate & BUTTON5_PRESSED) {
-                    scroll_down(3);
+                    scroll_down(1);
                 }
             }
             return;
@@ -249,6 +270,36 @@ void ChatUI::handle_input(int ch) {
         case 17:
             should_exit_ = true;
             return;
+
+        case '\t': {
+            if (input_buf_.empty()) return;
+            std::vector<std::string> completions = {
+                "/clear", "/cls", "/help", "/skill",
+                "/deepsearch", "/stats", "/model", "/export"
+            };
+            for (auto& s : config_->skills) {
+                completions.push_back("/skill " + s.name);
+            }
+            std::vector<std::string> matches;
+            for (auto& c : completions) {
+                if (c.size() >= input_buf_.size() &&
+                    c.substr(0, input_buf_.size()) == input_buf_) {
+                    matches.push_back(c);
+                }
+            }
+            if (matches.size() == 1) {
+                input_buf_ = matches[0];
+                cursor_pos_ = input_buf_.size();
+            } else if (matches.size() > 1) {
+                std::string hint;
+                for (auto& m : matches) {
+                    if (!hint.empty()) hint += "  ";
+                    hint += m;
+                }
+                state_.status_text = hint;
+            }
+            return;
+        }
     }
 
     if (ch >= 32 && ch <= 126) {
@@ -259,12 +310,29 @@ void ChatUI::handle_input(int ch) {
 void ChatUI::insert_char(char c) {
     input_buf_.insert(cursor_pos_, 1, c);
     cursor_pos_++;
+    update_input_height();
 }
 
 void ChatUI::delete_char() {
     if (cursor_pos_ > 0 && !input_buf_.empty()) {
         input_buf_.erase(cursor_pos_ - 1, 1);
         cursor_pos_--;
+    }
+    update_input_height();
+}
+
+void ChatUI::update_input_height() {
+    // Calculate lines needed: content length / terminal width
+    int max_x = term_width_ > 3 ? term_width_ - 2 : 40;
+    int needed = 1;
+    if (!input_buf_.empty()) {
+        needed = (str_width(input_buf_) / max_x) + 1;
+    }
+    needed = std::max(1, std::min(needed, 5));
+
+    if (needed != input_height_) {
+        input_height_ = needed;
+        handle_resize();
     }
 }
 
@@ -335,6 +403,17 @@ void ChatUI::send_message() {
             if (deep_search_cb_) deep_search_cb_(query);
             return;
         }
+        // Unknown command: pass through to send callback
+        ConversationEntry ue;
+        ue.type = ConversationEntry::USER;
+        ue.content = msg;
+        ue.timestamp = std::time(nullptr);
+        conv_->add_entry(ue);
+        input_buf_.clear();
+        cursor_pos_ = 0;
+        last_input_time_ = std::chrono::steady_clock::now();
+        if (send_cb_) send_cb_(msg);
+        return;
     }
 
     ConversationEntry ue;

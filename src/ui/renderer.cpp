@@ -176,6 +176,38 @@ static void render_table_group(const std::vector<MdLine>& group, int color, int 
 }
 
 // -------------------------------------------------------------------
+// Relative timestamp helper
+// -------------------------------------------------------------------
+static std::string format_timestamp(int64_t ts) {
+    if (ts <= 0) return "";
+    auto now = std::time(nullptr);
+    auto diff = std::difftime(now, ts);
+    char tbuf[32];
+    if (diff < 60) {
+        return "just now";
+    } else if (diff < 3600) {
+        int m = (int)(diff / 60);
+        snprintf(tbuf, sizeof(tbuf), "%dm ago", m);
+        return tbuf;
+    } else if (diff < 86400) {
+        int h = (int)(diff / 3600);
+        snprintf(tbuf, sizeof(tbuf), "%dh ago", h);
+        return tbuf;
+    } else if (diff < 604800) {
+        int d = (int)(diff / 86400);
+        snprintf(tbuf, sizeof(tbuf), "%dd ago", d);
+        return tbuf;
+    } else {
+        std::tm* tm = std::localtime(&ts);
+        if (tm) {
+            std::strftime(tbuf, sizeof(tbuf), "%b %d", tm);
+            return tbuf;
+        }
+        return "";
+    }
+}
+
+// -------------------------------------------------------------------
 // Build seg_lines from conversation (shared by draw & compute)
 // -------------------------------------------------------------------
 static std::vector<SegLine> build_seg_lines(Conversation* conv, int max_x,
@@ -187,10 +219,44 @@ static std::vector<SegLine> build_seg_lines(Conversation* conv, int max_x,
     std::vector<SegLine> seg_lines;
 
     if (entries.empty()) {
-        SegLine welcome;
-        welcome.segs.push_back({8, A_NORMAL, "  start typing to begin..."});
-        seg_lines.push_back(welcome);
+        {
+            SegLine sl;
+            sl.segs.push_back({6, A_BOLD, ""});
+            seg_lines.push_back(sl);
+        }
+        {
+            SegLine sl;
+            sl.segs.push_back({6, A_BOLD, "  \xe2\x96\x8c llmchat"});
+            seg_lines.push_back(sl);
+        }
+        {
+            SegLine sl;
+            sl.segs.push_back({6, A_NORMAL, "  \xe2\x96\x8c  terminal AI chat client"});
+            seg_lines.push_back(sl);
+        }
+        {
+            SegLine sl;
+            sl.segs.push_back({8, A_NORMAL, ""});
+            seg_lines.push_back(sl);
+        }
+        {
+            SegLine sl;
+            sl.segs.push_back({8, A_NORMAL, "  \xe2\x96\x8c  Type a message to begin"});
+            seg_lines.push_back(sl);
+        }
+        {
+            SegLine sl;
+            sl.segs.push_back({8, A_NORMAL, "  \xe2\x96\x8c  /help for commands  "});
+            seg_lines.push_back(sl);
+        }
+        {
+            SegLine sl;
+            sl.segs.push_back({8, A_NORMAL, "  \xe2\x96\x8c  TAB for completion  "});
+            seg_lines.push_back(sl);
+        }
     }
+
+    int prev_type = -1;
 
     for (size_t ei = 0; ei < entries.size(); ei++) {
         auto& entry = entries[ei];
@@ -224,6 +290,9 @@ static std::vector<SegLine> build_seg_lines(Conversation* conv, int max_x,
                 break;
         }
 
+        bool same_role = (prev_type == (int)entry.type);
+        prev_type = (int)entry.type;
+
         std::string content = entry.content;
 
         if (is_streaming &&
@@ -231,18 +300,9 @@ static std::vector<SegLine> build_seg_lines(Conversation* conv, int max_x,
             color = anim_color_idx;
         }
 
-        // Role label header
-        {
-            std::string ts;
-            if (entry.timestamp > 0) {
-                char tbuf[16];
-                std::time_t t = entry.timestamp;
-                std::tm* tm = std::localtime(&t);
-                if (tm) {
-                    std::strftime(tbuf, sizeof(tbuf), "%H:%M", tm);
-                    ts = tbuf;
-                }
-            }
+        // Role label header (skip if same consecutive role)
+        if (!same_role) {
+            std::string ts = format_timestamp(entry.timestamp);
             std::string header = " \xe2\x96\x8c "; // " ▌ "
             header += label;
             if (!ts.empty()) {
@@ -453,10 +513,7 @@ int Renderer::compute_total_box_lines(Conversation* conv, int max_x) {
     return sl.size();
 }
 
-void Renderer::draw_tamagotchi(WINDOW* win, int mood, int anim_frame) {
-    int x = 1;
-    int y = 0;
-
+void Renderer::draw_tamagotchi(WINDOW* win, int mood, int anim_frame, int max_x) {
     std::string face;
     switch (mood) {
         case TAMAGOTCHI_HAPPY:
@@ -471,8 +528,11 @@ void Renderer::draw_tamagotchi(WINDOW* win, int mood, int anim_frame) {
             face = "\xe2\x97\x95\xef\xb9\x8f\xe2\x97\x95"; break; // ◕﹏◕
     }
 
+    int face_w = str_width(face);
+    int x = max_x - face_w - 2;
+    if (x < 0) x = 0;
     wattron(win, COLOR_PAIR(6) | A_BOLD);
-    mvwaddstr(win, y, x, face.c_str());
+    mvwaddstr(win, 0, x, face.c_str());
     wattroff(win, COLOR_PAIR(6) | A_BOLD);
 }
 
@@ -482,19 +542,15 @@ void Renderer::draw_chat(Conversation* conv, int scroll_offset, bool is_streamin
     int max_y = getmaxy(chat_win_);
     if (max_x < 1 || max_y < 1) return;
 
-    const int TAM_Y = 2;
-    int content_avail = max_y - TAM_Y;
-    if (content_avail < 0) content_avail = 0;
-
-    draw_tamagotchi(chat_win_, tamagotchi_mood, anim_frame);
+    draw_tamagotchi(chat_win_, tamagotchi_mood, anim_frame, max_x);
 
     auto seg_lines = build_seg_lines(conv, max_x, is_streaming, anim_color_idx);
 
     int total_lines = seg_lines.size();
     int start_line = scroll_offset;
-    int y = TAM_Y;
 
-    for (int i = start_line; i < total_lines && y < max_y; i++, y++) {
+    for (int i = start_line; i < total_lines && (i - start_line) < max_y; i++) {
+        int y = i - start_line;
         auto& sl = seg_lines[i];
         int x = 0;
 
@@ -523,26 +579,35 @@ void Renderer::draw_chat(Conversation* conv, int scroll_offset, bool is_streamin
         }
     }
 
+    // Scroll indicators
     if (scroll_offset > 0) {
-        mvwaddch(chat_win_, TAM_Y, max_x - 2, ACS_UARROW);
+        mvwaddch(chat_win_, 0, max_x - 2, ACS_UARROW);
     }
-    if (total_lines > content_avail && scroll_offset < total_lines - content_avail) {
+    if (total_lines > max_y && scroll_offset < total_lines - max_y) {
         mvwaddch(chat_win_, max_y - 1, max_x - 2, ACS_DARROW);
     }
-    if (total_lines > content_avail && content_avail > 2) {
-        float pct = (float)scroll_offset / (float)(total_lines - content_avail);
-        int indicator_y = TAM_Y + 1 + (int)(pct * (content_avail - 2));
-        if (indicator_y >= TAM_Y && indicator_y < max_y) {
-            wattron(chat_win_, COLOR_PAIR(6));
-            mvwaddch(chat_win_, indicator_y, max_x - 1, ' ');
-            wattroff(chat_win_, COLOR_PAIR(6));
+    // Scrollbar track and thumb
+    if (total_lines > max_y && max_y > 2) {
+        // Draw track
+        for (int ty = 0; ty < max_y; ty++) {
+            mvwaddch(chat_win_, ty, max_x - 1, ACS_VLINE | A_DIM);
+        }
+        // Draw thumb
+        float pct = (float)scroll_offset / (float)(total_lines - max_y);
+        int thumb_h = std::max(1, max_y * max_y / total_lines);
+        int thumb_y = (int)(pct * (max_y - thumb_h));
+        if (thumb_y + thumb_h > max_y) thumb_y = max_y - thumb_h;
+        for (int ty = 0; ty < thumb_h; ty++) {
+            wattron(chat_win_, COLOR_PAIR(6) | A_BOLD);
+            mvwaddch(chat_win_, thumb_y + ty, max_x - 1, ' ');
+            wattroff(chat_win_, COLOR_PAIR(6) | A_BOLD);
         }
     }
 
     wnoutrefresh(chat_win_);
 }
 
-void Renderer::draw_input(const std::string& input_buf, int cursor_pos, bool is_processing, int anim_color_idx, int anim_frame) {
+void Renderer::draw_input(const std::string& input_buf, int cursor_pos, bool is_processing, int anim_color_idx, int anim_frame, int msg_count) {
     werase(input_win_);
     int max_x = getmaxx(input_win_);
 
@@ -554,6 +619,17 @@ void Renderer::draw_input(const std::string& input_buf, int cursor_pos, bool is_
         wattron(input_win_, COLOR_PAIR(8));
         mvwaddnstr(input_win_, 0, 2, input_buf.c_str(), max_x - 3);
         wattroff(input_win_, COLOR_PAIR(8));
+    }
+
+    // Message counter on the right
+    if (msg_count > 0) {
+        std::string cnt = "[msg #" + std::to_string(msg_count) + "]";
+        int cnt_w = str_width(cnt);
+        if (cnt_w < max_x - 5) {
+            wattron(input_win_, COLOR_PAIR(7) | A_DIM);
+            mvwaddstr(input_win_, 0, max_x - cnt_w, cnt.c_str());
+            wattroff(input_win_, COLOR_PAIR(7) | A_DIM);
+        }
     }
 
     int cursor_display = std::min(cursor_pos, max_x - 3);
