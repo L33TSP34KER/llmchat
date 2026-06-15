@@ -39,6 +39,10 @@ void ChatUI::set_copy_callback(CopyCallback cb) {
     copy_cb_ = std::move(cb);
 }
 
+void ChatUI::set_clipboard_callback(ClipboardCallback cb) {
+    clipboard_cb_ = std::move(cb);
+}
+
 void ChatUI::stop() {
     should_exit_ = true;
 }
@@ -236,12 +240,24 @@ void ChatUI::handle_input(int ch) {
             if (getmouse(&event) == OK) {
                 if (event.bstate & BUTTON1_CLICKED) {
                     // Check if click is on tamagotchi (top-right corner)
-                    int face_w = 5; // approximate face width
+                    int face_w = 5;
                     if (event.y == 0 && event.x >= term_width_ - face_w - 4 &&
                         event.x < term_width_ - 2) {
                         tamagotchi_mood_ = TAMAGOTCHI_HAPPY;
                         state_.status_text = "*pet*";
                         last_input_time_ = std::chrono::steady_clock::now();
+                    } else if (event.y < chat_height_ && clipboard_cb_) {
+                        int ei = renderer_.entry_at_y(event.y, scroll_offset_);
+                        if (ei >= 0) {
+                            auto entries = conv_->get_entries();
+                            if (ei < (int)entries.size()) {
+                                if (clipboard_cb_(entries[ei].content)) {
+                                    state_.status_text = "Copied message " + std::to_string(ei+1);
+                                } else {
+                                    state_.status_text = "Copy failed";
+                                }
+                            }
+                        }
                     }
                 } else if (event.bstate & BUTTON4_PRESSED) {
                     scroll_up(1);

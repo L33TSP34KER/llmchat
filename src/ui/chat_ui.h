@@ -26,6 +26,7 @@ public:
     using ClearCallback = std::function<void()>;
     using CancelCallback = std::function<void()>;
     using CopyCallback = std::function<void()>;
+    using ClipboardCallback = std::function<bool(const std::string&)>;
 
     ChatUI(Conversation* conv, Config* config);
     ~ChatUI();
@@ -39,6 +40,7 @@ public:
     void set_clear_callback(ClearCallback cb);
     void set_cancel_callback(CancelCallback cb);
     void set_copy_callback(CopyCallback cb);
+    void set_clipboard_callback(ClipboardCallback cb);
     void notify_update();
 
 private:
@@ -50,6 +52,7 @@ private:
     ClearCallback clear_cb_;
     CancelCallback cancel_cb_;
     CopyCallback copy_cb_;
+    ClipboardCallback clipboard_cb_;
 
     Theme theme_;
     Renderer renderer_;

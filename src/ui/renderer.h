@@ -30,8 +30,12 @@ public:
 
     static void draw_tamagotchi(WINDOW* win, int mood, int anim_frame = 0, int max_x = 80);
 
+    // Get the conversation entry index at a given screen y (after last draw_chat)
+    int entry_at_y(int screen_y, int scroll_offset) const;
+
 private:
     WINDOW* chat_win_ = nullptr;
     WINDOW* input_win_ = nullptr;
     WINDOW* status_win_ = nullptr;
+    std::vector<int> line_to_entry_;
 };

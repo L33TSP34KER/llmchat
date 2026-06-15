@@ -262,6 +262,12 @@ int main(int argc, char* argv[]) {
     });
 
     // Copy callback: copy last assistant answer to clipboard
+    // Clipboard write callback (for click-to-copy)
+    ui.set_clipboard_callback([&](const std::string& text) -> bool {
+        return copy_to_clipboard(text);
+    });
+
+    // Copy callback: copy last assistant answer to clipboard
     ui.set_copy_callback([&]() {
         auto entries = conv.get_entries();
         for (auto it = entries.rbegin(); it != entries.rend(); ++it) {

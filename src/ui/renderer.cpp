@@ -211,48 +211,55 @@ static std::string format_timestamp(int64_t ts) {
 // Build seg_lines from conversation (shared by draw & compute)
 // -------------------------------------------------------------------
 static std::vector<SegLine> build_seg_lines(Conversation* conv, int max_x,
-                                             bool is_streaming, int anim_color_idx) {
+                                             bool is_streaming, int anim_color_idx,
+                                             std::vector<int>* line_to_entry = nullptr) {
     int content_w = max_x - 4;
     if (content_w < 4) content_w = 4;
 
     auto entries = conv->get_entries();
     std::vector<SegLine> seg_lines;
+    if (line_to_entry) line_to_entry->clear();
+    int current_entry = -1;
+    auto add_line = [&](SegLine sl) {
+        if (line_to_entry) line_to_entry->push_back(current_entry);
+        seg_lines.push_back(std::move(sl));
+    };
 
     if (entries.empty()) {
         {
             SegLine sl;
             sl.segs.push_back({6, A_BOLD, ""});
-            seg_lines.push_back(sl);
+            add_line(sl);
         }
         {
             SegLine sl;
             sl.segs.push_back({6, A_BOLD, "  \xe2\x96\x8c llmchat"});
-            seg_lines.push_back(sl);
+            add_line(sl);
         }
         {
             SegLine sl;
             sl.segs.push_back({6, A_NORMAL, "  \xe2\x96\x8c  terminal AI chat client"});
-            seg_lines.push_back(sl);
+            add_line(sl);
         }
         {
             SegLine sl;
             sl.segs.push_back({8, A_NORMAL, ""});
-            seg_lines.push_back(sl);
+            add_line(sl);
         }
         {
             SegLine sl;
             sl.segs.push_back({8, A_NORMAL, "  \xe2\x96\x8c  Type a message to begin"});
-            seg_lines.push_back(sl);
+            add_line(sl);
         }
         {
             SegLine sl;
             sl.segs.push_back({8, A_NORMAL, "  \xe2\x96\x8c  /help for commands  "});
-            seg_lines.push_back(sl);
+            add_line(sl);
         }
         {
             SegLine sl;
             sl.segs.push_back({8, A_NORMAL, "  \xe2\x96\x8c  TAB for completion  "});
-            seg_lines.push_back(sl);
+            add_line(sl);
         }
     }
 
@@ -260,6 +267,7 @@ static std::vector<SegLine> build_seg_lines(Conversation* conv, int max_x,
 
     for (size_t ei = 0; ei < entries.size(); ei++) {
         auto& entry = entries[ei];
+        current_entry = (int)ei;
         std::string label;
         int color = -1;
 
@@ -310,7 +318,7 @@ static std::vector<SegLine> build_seg_lines(Conversation* conv, int max_x,
             }
             SegLine sl;
             sl.segs.push_back({color, A_BOLD, header});
-            seg_lines.push_back(sl);
+            add_line(sl);
         }
 
         // Parse content with md_parse
@@ -335,7 +343,7 @@ static std::vector<SegLine> build_seg_lines(Conversation* conv, int max_x,
             if (md_line.segs.empty() && !md_line.is_code_block && !md_line.is_blockquote) {
                 SegLine sl;
                 sl.segs.push_back({-1, A_NORMAL, ""});
-                seg_lines.push_back(sl);
+                add_line(sl);
                 continue;
             }
 
@@ -349,12 +357,12 @@ static std::vector<SegLine> build_seg_lines(Conversation* conv, int max_x,
                     std::string fence = " ";
                     for (int i = 0; i < content_w; i++) fence += "\xe2\x94\x80";
                     sl.segs.push_back({4, A_BOLD, fence});
-                    seg_lines.push_back(sl);
+                    add_line(sl);
                 }
                 for (size_t ci = 0; ci < code_lines.size(); ci++) {
                     SegLine sl;
                     sl.segs.push_back({4, A_NORMAL, " \xe2\x96\x8c " + code_lines[ci]});
-                    seg_lines.push_back(sl);
+                    add_line(sl);
                 }
                 // Footer fence
                 {
@@ -362,7 +370,7 @@ static std::vector<SegLine> build_seg_lines(Conversation* conv, int max_x,
                     std::string fence = " ";
                     for (int i = 0; i < content_w; i++) fence += "\xe2\x94\x80";
                     sl.segs.push_back({4, A_BOLD, fence});
-                    seg_lines.push_back(sl);
+                    add_line(sl);
                 }
                 continue;
             }
@@ -374,7 +382,7 @@ static std::vector<SegLine> build_seg_lines(Conversation* conv, int max_x,
                 SegLine sl;
                 sl.is_sep = true;
                 sl.segs.push_back({color, A_BOLD, hr});
-                seg_lines.push_back(sl);
+                add_line(sl);
                 continue;
             }
 
@@ -386,7 +394,10 @@ static std::vector<SegLine> build_seg_lines(Conversation* conv, int max_x,
                 rs.color = color;
                 rs.attr = A_NORMAL;
 
-                if (seg.type == MdSeg::BOLD || seg.type == MdSeg::HEADING) {
+                if (seg.type == MdSeg::BOLD) {
+                    rs.attr = A_BOLD;
+                } else if (seg.type == MdSeg::HEADING) {
+                    rs.color = 7;
                     rs.attr = A_BOLD;
                 } else if (seg.type == MdSeg::ITALIC) {
                     rs.attr = A_ITALIC;
@@ -415,13 +426,7 @@ static std::vector<SegLine> build_seg_lines(Conversation* conv, int max_x,
                     seg.text = "\xe2\x97\x8b "; // circle ○
                 }
 
-                // If it's a heading, prefix with #
-                std::string prefix;
-                if (seg.type == MdSeg::HEADING) {
-                    prefix = std::string(seg.level, '#') + " ";
-                }
-
-                rs.text = prefix + seg.text;
+                rs.text = seg.text;
 
                 // Ensure total line doesn't exceed content_w
                 int seg_w = str_width(rs.text);
@@ -440,14 +445,34 @@ static std::vector<SegLine> build_seg_lines(Conversation* conv, int max_x,
                 auto& first = sl.segs.front();
                 first.text = " \xe2\x96\x8c " + first.text;
             }
-            seg_lines.push_back(sl);
+            add_line(sl);
+
+            // For h1, add underline below
+            bool all_heading = !md_line.segs.empty();
+            int heading_level = 0;
+            for (auto& s : md_line.segs) {
+                if (s.type == MdSeg::HEADING) {
+                    if (heading_level == 0 || s.level < heading_level)
+                        heading_level = s.level;
+                } else {
+                    all_heading = false;
+                    break;
+                }
+            }
+            if (all_heading && heading_level == 1) {
+                std::string ul;
+                for (int i = 0; i < content_w; i++) ul += "\xe2\x94\x80";
+                SegLine ul_sl;
+                ul_sl.segs.push_back({7, A_BOLD, "  " + ul});
+                add_line(ul_sl);
+            }
         }
         flush_table();
 
         // Trailing blank line
         SegLine blank;
         blank.segs.push_back({-1, A_NORMAL, ""});
-        seg_lines.push_back(blank);
+        add_line(blank);
     }
 
     return seg_lines;
@@ -528,8 +553,15 @@ void Renderer::init_animation_colors(bool can_change) {
 }
 
 int Renderer::compute_total_box_lines(Conversation* conv, int max_x) {
-    auto sl = build_seg_lines(conv, max_x, false, 0);
+    auto sl = build_seg_lines(conv, max_x, false, 0, nullptr);
     return sl.size();
+}
+
+int Renderer::entry_at_y(int screen_y, int scroll_offset) const {
+    int total = (int)line_to_entry_.size();
+    int line = screen_y + scroll_offset;
+    if (line < 0 || line >= total) return -1;
+    return line_to_entry_[line];
 }
 
 void Renderer::draw_tamagotchi(WINDOW* win, int mood, int anim_frame, int max_x) {
@@ -563,7 +595,7 @@ void Renderer::draw_chat(Conversation* conv, int scroll_offset, bool is_streamin
 
     draw_tamagotchi(chat_win_, tamagotchi_mood, anim_frame, max_x);
 
-    auto seg_lines = build_seg_lines(conv, max_x, is_streaming, anim_color_idx);
+    auto seg_lines = build_seg_lines(conv, max_x, is_streaming, anim_color_idx, &line_to_entry_);
 
     int total_lines = seg_lines.size();
     int start_line = scroll_offset;
