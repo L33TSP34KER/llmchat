@@ -137,7 +137,7 @@ void ChatUI::draw_all() {
     anim_frame_++;
 
     int total = renderer_.compute_total_box_lines(conv_, term_width_);
-    if (scroll_offset_ >= total - chat_height_) {
+    if (was_at_bottom_) {
         scroll_offset_ = std::max(0, total - chat_height_);
     }
 
@@ -447,12 +447,12 @@ void ChatUI::send_message() {
 }
 
 bool ChatUI::is_at_bottom() {
-    int total = renderer_.compute_total_box_lines(conv_, term_width_);
-    return scroll_offset_ >= total - chat_height_;
+    return was_at_bottom_;
 }
 
 void ChatUI::scroll_up(int lines) {
     scroll_offset_ = std::max(0, scroll_offset_ - lines);
+    was_at_bottom_ = false;
     needs_redraw_ = true;
 }
 
@@ -461,6 +461,8 @@ void ChatUI::scroll_down(int lines) {
     scroll_offset_ += lines;
     if (scroll_offset_ > total - chat_height_)
         scroll_offset_ = std::max(0, total - chat_height_);
+    int max_scroll = std::max(0, total - chat_height_);
+    was_at_bottom_ = (scroll_offset_ >= max_scroll);
     needs_redraw_ = true;
 }
 

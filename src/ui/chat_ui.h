@@ -71,6 +71,7 @@ private:
     std::string input_buf_;
     int cursor_pos_ = 0;
     int scroll_offset_ = 0;
+    bool was_at_bottom_ = true;
     int history_pos_ = -1;
     std::vector<std::string> input_history_;
 
