@@ -17,8 +17,8 @@ public:
 
     void set_windows(WINDOW* chat_win, WINDOW* input_win, WINDOW* status_win);
 
-    void draw_chat(Conversation* conv, int scroll_offset, bool is_streaming, int anim_color_idx, int tamagotchi_mood = TAMAGOTCHI_HAPPY);
-    void draw_input(const std::string& input_buf, int cursor_pos, bool is_processing, int anim_color_idx);
+    void draw_chat(Conversation* conv, int scroll_offset, bool is_streaming, int anim_color_idx, int tamagotchi_mood = TAMAGOTCHI_HAPPY, int anim_frame = 0);
+    void draw_input(const std::string& input_buf, int cursor_pos, bool is_processing, int anim_color_idx, int anim_frame = 0);
     void draw_status(bool is_processing, bool use_casino_status, const std::string& casino_frame,
                      const std::string& model_name, const std::string& status_text);
     int compute_total_box_lines(Conversation* conv, int max_x);
@@ -28,7 +28,7 @@ public:
     void init_animation_colors(bool can_change);
     static void init_pair_safe(int pair, int fg, int bg);
 
-    static void draw_tamagotchi(WINDOW* win, int mood);
+    static void draw_tamagotchi(WINDOW* win, int mood, int anim_frame = 0);
 
 private:
     WINDOW* chat_win_ = nullptr;

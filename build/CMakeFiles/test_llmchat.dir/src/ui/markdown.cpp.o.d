@@ -1,4 +1,4 @@
-CMakeFiles/llmchat.dir/src/ui/markdown.cpp.o: \
+CMakeFiles/test_llmchat.dir/src/ui/markdown.cpp.o: \
  /run/media/wyene/disk/project/llmchat/src/ui/markdown.cpp \
  /usr/include/stdc-predef.h \
  /run/media/wyene/disk/project/llmchat/src/ui/markdown.h \

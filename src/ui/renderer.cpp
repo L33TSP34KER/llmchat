@@ -188,15 +188,8 @@ static std::vector<SegLine> build_seg_lines(Conversation* conv, int max_x,
 
     if (entries.empty()) {
         SegLine welcome;
-        std::string wtext = "  \xe2\x94\x80\xe2\x94\x80  llmchat  \xe2\x94\x80\xe2\x94\x80";
-        welcome.segs.push_back({2, A_BOLD, wtext});
+        welcome.segs.push_back({8, A_NORMAL, "  start typing to begin..."});
         seg_lines.push_back(welcome);
-        SegLine sub;
-        sub.segs.push_back({8, A_NORMAL, "  start typing to begin..."});
-        seg_lines.push_back(sub);
-        SegLine blank;
-        blank.segs.push_back({-1, A_NORMAL, ""});
-        seg_lines.push_back(blank);
     }
 
     for (size_t ei = 0; ei < entries.size(); ei++) {
@@ -238,7 +231,7 @@ static std::vector<SegLine> build_seg_lines(Conversation* conv, int max_x,
             color = anim_color_idx;
         }
 
-        // Separator line
+        // Role label header
         {
             std::string ts;
             if (entry.timestamp > 0) {
@@ -250,18 +243,13 @@ static std::vector<SegLine> build_seg_lines(Conversation* conv, int max_x,
                     ts = tbuf;
                 }
             }
-            std::string sep = " \xe2\x94\x80\xe2\x94\x80 "; // " ── "
-            sep += label;
+            std::string header = " \xe2\x96\x8c "; // " ▌ "
+            header += label;
             if (!ts.empty()) {
-                sep += " \xe2\x80\xa2 " + ts; // " • 14:30"
+                header += "  \xe2\x80\xa2  " + ts;
             }
-            sep += " ";
-            int fill_len = max_x - 4 - str_width(sep);
-            if (fill_len < 0) fill_len = 0;
-            for (int i = 0; i < fill_len; i++) sep += "\xe2\x94\x80"; // "─"
             SegLine sl;
-            sl.is_sep = true;
-            sl.segs.push_back({color, A_BOLD, sep});
+            sl.segs.push_back({color, A_BOLD, header});
             seg_lines.push_back(sl);
         }
 
@@ -297,8 +285,7 @@ static std::vector<SegLine> build_seg_lines(Conversation* conv, int max_x,
                 if (code_lines.empty()) code_lines = {" "};
                 for (size_t ci = 0; ci < code_lines.size(); ci++) {
                     SegLine sl;
-                    std::string prefix = (ci == 0) ? "  \xe2\x94\x81 " : "   \xe2\x94\x81 "; // "  ━ " or "   ━ "
-                    sl.segs.push_back({color, A_DIM, prefix + code_lines[ci]});
+                    sl.segs.push_back({color, A_DIM, " \xe2\x96\x8c " + code_lines[ci]}); // " ▌ "
                     seg_lines.push_back(sl);
                 }
                 continue;
@@ -330,7 +317,11 @@ static std::vector<SegLine> build_seg_lines(Conversation* conv, int max_x,
                 } else if (seg.type == MdSeg::STRIKETHROUGH) {
                     rs.attr = A_DIM;
                 } else if (seg.type == MdSeg::CODE) {
-                    rs.attr = A_REVERSE;
+                    rs.attr = A_DIM;
+                } else if (seg.type == MdSeg::MATH) {
+                    rs.attr = A_DIM;
+                } else if (seg.type == MdSeg::DISPLAY_MATH) {
+                    rs.attr = A_DIM | A_BOLD;
                 } else if (seg.type == MdSeg::BLOCKQUOTE) {
                     rs.attr = A_DIM;
                     seg.text = "\xe2\x96\x8d " + seg.text; // "▍ "
@@ -366,9 +357,9 @@ static std::vector<SegLine> build_seg_lines(Conversation* conv, int max_x,
             if (sl.segs.empty()) {
                 sl.segs.push_back({-1, A_NORMAL, ""});
             } else {
-                // Prefix first segment with "  "
+                // Prefix first segment with bar
                 auto& first = sl.segs.front();
-                first.text = "  " + first.text;
+                first.text = " \xe2\x96\x8c " + first.text;
             }
             seg_lines.push_back(sl);
         }
@@ -462,16 +453,19 @@ int Renderer::compute_total_box_lines(Conversation* conv, int max_x) {
     return sl.size();
 }
 
-void Renderer::draw_tamagotchi(WINDOW* win, int mood) {
+void Renderer::draw_tamagotchi(WINDOW* win, int mood, int anim_frame) {
     int x = 1;
     int y = 0;
 
     std::string face;
     switch (mood) {
         case TAMAGOTCHI_HAPPY:
-            face = "\xe2\x97\x95\xe2\x80\xbf\xe2\x97\x95"; break; // ◕‿◕
+            face = (anim_frame % 16 < 8)
+                ? "\xe2\x97\x95\xe2\x80\xbf\xe2\x97\x95"   // ◕‿◕
+                : "\xe2\x97\x95\xcb\x98\xe2\x97\x95";       // ◕˘◕ (breathing)
+            break;
         case TAMAGOTCHI_NEUTRAL:
-            face = "\xe2\x97\x95_\xe2\x97\x95"; break;             // ◕_◕
+            face = "\xe2\x97\x95_\xe2\x97\x95"; break;      // ◕_◕
         case TAMAGOTCHI_SAD:
         default:
             face = "\xe2\x97\x95\xef\xb9\x8f\xe2\x97\x95"; break; // ◕﹏◕
@@ -482,7 +476,7 @@ void Renderer::draw_tamagotchi(WINDOW* win, int mood) {
     wattroff(win, COLOR_PAIR(6) | A_BOLD);
 }
 
-void Renderer::draw_chat(Conversation* conv, int scroll_offset, bool is_streaming, int anim_color_idx, int tamagotchi_mood) {
+void Renderer::draw_chat(Conversation* conv, int scroll_offset, bool is_streaming, int anim_color_idx, int tamagotchi_mood, int anim_frame) {
     werase(chat_win_);
     int max_x = getmaxx(chat_win_);
     int max_y = getmaxy(chat_win_);
@@ -492,7 +486,7 @@ void Renderer::draw_chat(Conversation* conv, int scroll_offset, bool is_streamin
     int content_avail = max_y - TAM_Y;
     if (content_avail < 0) content_avail = 0;
 
-    draw_tamagotchi(chat_win_, tamagotchi_mood);
+    draw_tamagotchi(chat_win_, tamagotchi_mood, anim_frame);
 
     auto seg_lines = build_seg_lines(conv, max_x, is_streaming, anim_color_idx);
 
@@ -548,32 +542,32 @@ void Renderer::draw_chat(Conversation* conv, int scroll_offset, bool is_streamin
     wnoutrefresh(chat_win_);
 }
 
-void Renderer::draw_input(const std::string& input_buf, int cursor_pos, bool is_processing, int anim_color_idx) {
+void Renderer::draw_input(const std::string& input_buf, int cursor_pos, bool is_processing, int anim_color_idx, int anim_frame) {
     werase(input_win_);
     int max_x = getmaxx(input_win_);
 
-    wattron(input_win_, COLOR_PAIR(7));
-    mvwhline(input_win_, 0, 0, ACS_HLINE, max_x);
-    wattroff(input_win_, COLOR_PAIR(7));
-
-    if (is_processing) {
-        wattron(input_win_, COLOR_PAIR(anim_color_idx) | A_BOLD);
-        mvwaddstr(input_win_, 0, 2, " generating... ");
-        wattroff(input_win_, COLOR_PAIR(anim_color_idx) | A_BOLD);
-    }
-
     wattron(input_win_, COLOR_PAIR(8) | A_BOLD);
-    mvwaddstr(input_win_, 1, 1, "> ");
+    mvwaddstr(input_win_, 0, 0, "> ");
     wattroff(input_win_, COLOR_PAIR(8) | A_BOLD);
 
     if (!input_buf.empty()) {
         wattron(input_win_, COLOR_PAIR(8));
-        mvwaddnstr(input_win_, 1, 3, input_buf.c_str(), max_x - 5);
+        mvwaddnstr(input_win_, 0, 2, input_buf.c_str(), max_x - 3);
         wattroff(input_win_, COLOR_PAIR(8));
     }
 
-    int cursor_display = std::min(cursor_pos, max_x - 5);
-    wmove(input_win_, 1, 3 + cursor_display);
+    int cursor_display = std::min(cursor_pos, max_x - 3);
+    wmove(input_win_, 0, 2 + cursor_display);
+
+    if (is_processing) {
+        static const char* dots[] = { "...", ".. ", ".  ", "   " };
+        int idx = (anim_frame / 3) % 4;
+        std::string gen = "generating";
+        gen += dots[idx];
+        wattron(input_win_, COLOR_PAIR(anim_color_idx) | A_BOLD);
+        mvwaddstr(input_win_, 1, 0, gen.c_str());
+        wattroff(input_win_, COLOR_PAIR(anim_color_idx) | A_BOLD);
+    }
 
     wnoutrefresh(input_win_);
 }
@@ -588,23 +582,22 @@ void Renderer::draw_status(bool is_processing, bool use_casino_status, const std
         if (use_casino_status) {
             left = casino_frame;
         } else {
-            left = " \xe2\x97\x8f";  // " ●"
+            left = "\xe2\x97\x8f"; // ●
+            if (!model_name.empty()) left += " " + model_name;
+            left += " generating...";
         }
     } else {
-        left = " \xe2\x97\x8f";  // " ●"
-    }
-
-    if (!model_name.empty()) {
-        left += "  " + model_name;
+        if (!model_name.empty()) {
+            left = "\xe2\x97\x8f " + model_name; // ● model
+        }
     }
 
     if (!status_text.empty()) {
-        left += "  " + status_text;
-    } else if (is_processing) {
-        left += "  processing...";
+        if (!left.empty()) left += "  " + status_text;
+        else left = status_text;
     }
 
-    std::string hints = " ^C Cancel  ^L Clear  ^Y Copy  ^Q Quit  PgUp/Dn Scroll";
+    std::string hints = "^C cancel  ^L clear  ^Y copy";
 
     wattron(status_win_, COLOR_PAIR(6) | A_BOLD);
     mvwaddnstr(status_win_, 0, 0, left.c_str(), max_x);

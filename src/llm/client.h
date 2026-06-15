@@ -32,6 +32,11 @@ struct Message {
     }
 };
 
+struct ToolCall {
+    std::string name;
+    std::string arguments;
+};
+
 struct QueuedMessage {
     std::string content;
     std::string skill_override;

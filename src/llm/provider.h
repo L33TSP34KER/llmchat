@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <map>
 #include <functional>
 #include <atomic>
 #include <nlohmann/json.hpp>
@@ -34,8 +35,8 @@ public:
 
     bool handle_stream_chunk(const std::string& chunk,
                              std::string& current_content,
-                             std::string& pending_tool_name,
-                             std::string& pending_tool_args);
+                             std::map<int, std::string>& pending_tool_names,
+                             std::map<int, std::string>& pending_tool_args);
 
 private:
     HttpClient http_;

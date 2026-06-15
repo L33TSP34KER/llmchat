@@ -120,12 +120,12 @@ CMakeFiles/llmchat.dir/clean:
 CMakeFiles/test_llmchat.dir/all:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_llmchat.dir/build.make CMakeFiles/test_llmchat.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_llmchat.dir/build.make CMakeFiles/test_llmchat.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/run/media/wyene/disk/project/llmchat/build/CMakeFiles --progress-num=17,18,19,20,21,22,23,24 "Built target test_llmchat"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/run/media/wyene/disk/project/llmchat/build/CMakeFiles --progress-num=17,18,19,20,21,22,23,24,25,26 "Built target test_llmchat"
 .PHONY : CMakeFiles/test_llmchat.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/test_llmchat.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /run/media/wyene/disk/project/llmchat/build/CMakeFiles 8
+	$(CMAKE_COMMAND) -E cmake_progress_start /run/media/wyene/disk/project/llmchat/build/CMakeFiles 10
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/test_llmchat.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /run/media/wyene/disk/project/llmchat/build/CMakeFiles 0
 .PHONY : CMakeFiles/test_llmchat.dir/rule
@@ -137,7 +137,7 @@ test_llmchat: CMakeFiles/test_llmchat.dir/rule
 # codegen rule for target.
 CMakeFiles/test_llmchat.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_llmchat.dir/build.make CMakeFiles/test_llmchat.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/run/media/wyene/disk/project/llmchat/build/CMakeFiles --progress-num=17,18,19,20,21,22,23,24 "Finished codegen for target test_llmchat"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/run/media/wyene/disk/project/llmchat/build/CMakeFiles --progress-num=17,18,19,20,21,22,23,24,25,26 "Finished codegen for target test_llmchat"
 .PHONY : CMakeFiles/test_llmchat.dir/codegen
 
 # clean rule for target.

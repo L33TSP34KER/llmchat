@@ -21,12 +21,12 @@ bool OpenAIProvider::send_request(const std::string& payload) {
     http_.set_body(payload);
 
     std::string current_content;
-    std::string pending_tool_name;
-    std::string pending_tool_args;
+    std::map<int, std::string> pending_tool_names;
+    std::map<int, std::string> pending_tool_args;
 
-    http_.set_stream_callback([this, &current_content, &pending_tool_name, &pending_tool_args](const std::string& chunk) -> bool {
+    http_.set_stream_callback([this, &current_content, &pending_tool_names, &pending_tool_args](const std::string& chunk) -> bool {
         if (cancel_) return false;
-        return handle_stream_chunk(chunk, current_content, pending_tool_name, pending_tool_args);
+        return handle_stream_chunk(chunk, current_content, pending_tool_names, pending_tool_args);
     });
 
     bool ok = http_.perform_stream();
@@ -44,8 +44,8 @@ void OpenAIProvider::cancel() {
 
 bool OpenAIProvider::handle_stream_chunk(const std::string& chunk,
                                          std::string& current_content,
-                                         std::string& pending_tool_name,
-                                         std::string& pending_tool_args) {
+                                         std::map<int, std::string>& pending_tool_names,
+                                         std::map<int, std::string>& pending_tool_args) {
     std::istringstream stream(chunk);
     std::string line;
 
@@ -76,13 +76,14 @@ bool OpenAIProvider::handle_stream_chunk(const std::string& chunk,
 
                 if (delta.contains("tool_calls")) {
                     for (auto& tc : delta["tool_calls"]) {
+                        int index = tc.value("index", 0);
                         if (tc.contains("function")) {
                             auto& fn = tc["function"];
                             if (fn.contains("name") && !fn["name"].is_null()) {
-                                pending_tool_name += fn["name"].get<std::string>();
+                                pending_tool_names[index] += fn["name"].get<std::string>();
                             }
                             if (fn.contains("arguments") && !fn["arguments"].is_null()) {
-                                pending_tool_args += fn["arguments"].get<std::string>();
+                                pending_tool_args[index] += fn["arguments"].get<std::string>();
                             }
                         }
                     }
@@ -97,8 +98,14 @@ bool OpenAIProvider::handle_stream_chunk(const std::string& chunk,
                         reason = delta["finish_reason"].get<std::string>();
                     if (reason == "tool_calls") {
                         json td;
-                        td["name"] = pending_tool_name;
-                        td["arguments"] = pending_tool_args;
+                        json calls = json::array();
+                        for (auto& [idx, name] : pending_tool_names) {
+                            json call;
+                            call["name"] = name;
+                            call["arguments"] = pending_tool_args[idx];
+                            calls.push_back(call);
+                        }
+                        td["calls"] = calls;
                         if (stream_cb_) {
                             stream_cb_({StreamEvent::TOOL_CALL, "", td, ""});
                         }

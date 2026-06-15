@@ -454,6 +454,7 @@ src/ui/markdown.o: src/ui/markdown.cpp.o
 # target to build an object file
 src/ui/markdown.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/llmchat.dir/build.make CMakeFiles/llmchat.dir/src/ui/markdown.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_llmchat.dir/build.make CMakeFiles/test_llmchat.dir/src/ui/markdown.cpp.o
 .PHONY : src/ui/markdown.cpp.o
 
 src/ui/markdown.i: src/ui/markdown.cpp.i
@@ -462,6 +463,7 @@ src/ui/markdown.i: src/ui/markdown.cpp.i
 # target to preprocess a source file
 src/ui/markdown.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/llmchat.dir/build.make CMakeFiles/llmchat.dir/src/ui/markdown.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_llmchat.dir/build.make CMakeFiles/test_llmchat.dir/src/ui/markdown.cpp.i
 .PHONY : src/ui/markdown.cpp.i
 
 src/ui/markdown.s: src/ui/markdown.cpp.s
@@ -470,6 +472,7 @@ src/ui/markdown.s: src/ui/markdown.cpp.s
 # target to generate assembly for a file
 src/ui/markdown.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/llmchat.dir/build.make CMakeFiles/llmchat.dir/src/ui/markdown.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_llmchat.dir/build.make CMakeFiles/test_llmchat.dir/src/ui/markdown.cpp.s
 .PHONY : src/ui/markdown.cpp.s
 
 src/ui/renderer.o: src/ui/renderer.cpp.o
@@ -502,6 +505,7 @@ src/ui/text_util.o: src/ui/text_util.cpp.o
 # target to build an object file
 src/ui/text_util.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/llmchat.dir/build.make CMakeFiles/llmchat.dir/src/ui/text_util.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_llmchat.dir/build.make CMakeFiles/test_llmchat.dir/src/ui/text_util.cpp.o
 .PHONY : src/ui/text_util.cpp.o
 
 src/ui/text_util.i: src/ui/text_util.cpp.i
@@ -510,6 +514,7 @@ src/ui/text_util.i: src/ui/text_util.cpp.i
 # target to preprocess a source file
 src/ui/text_util.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/llmchat.dir/build.make CMakeFiles/llmchat.dir/src/ui/text_util.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_llmchat.dir/build.make CMakeFiles/test_llmchat.dir/src/ui/text_util.cpp.i
 .PHONY : src/ui/text_util.cpp.i
 
 src/ui/text_util.s: src/ui/text_util.cpp.s
@@ -518,6 +523,7 @@ src/ui/text_util.s: src/ui/text_util.cpp.s
 # target to generate assembly for a file
 src/ui/text_util.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/llmchat.dir/build.make CMakeFiles/llmchat.dir/src/ui/text_util.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_llmchat.dir/build.make CMakeFiles/test_llmchat.dir/src/ui/text_util.cpp.s
 .PHONY : src/ui/text_util.cpp.s
 
 test/test_flow.o: test/test_flow.cpp.o

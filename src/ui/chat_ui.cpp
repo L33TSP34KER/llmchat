@@ -124,15 +124,17 @@ void ChatUI::draw_all() {
         update_casino_status();
     }
 
-    update_tamagotchi_mood();
+        update_tamagotchi_mood();
+
+    anim_frame_++;
 
     int total = renderer_.compute_total_box_lines(conv_, term_width_);
     if (scroll_offset_ >= total - chat_height_) {
         scroll_offset_ = std::max(0, total - chat_height_);
     }
 
-    renderer_.draw_chat(conv_, scroll_offset_, state_.processing, animation_.get_color_index(), tamagotchi_mood_);
-    renderer_.draw_input(input_buf_, cursor_pos_, state_.processing, animation_.get_color_index());
+    renderer_.draw_chat(conv_, scroll_offset_, state_.processing, animation_.get_color_index(), tamagotchi_mood_, anim_frame_);
+    renderer_.draw_input(input_buf_, cursor_pos_, state_.processing, animation_.get_color_index(), anim_frame_);
     renderer_.draw_status(state_.processing, use_casino_status_, casino_frame_,
                           state_.model_name, state_.status_text);
     doupdate();

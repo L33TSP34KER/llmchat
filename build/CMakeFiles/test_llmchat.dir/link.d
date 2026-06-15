@@ -9,6 +9,8 @@ test_llmchat: \
   CMakeFiles/test_llmchat.dir/src/llm/tool_exec.cpp.o \
   CMakeFiles/test_llmchat.dir/src/llm/persistent_shell.cpp.o \
   CMakeFiles/test_llmchat.dir/src/llm/provider.cpp.o \
+  CMakeFiles/test_llmchat.dir/src/ui/markdown.cpp.o \
+  CMakeFiles/test_llmchat.dir/src/ui/text_util.cpp.o \
   /usr/lib/gcc/x86_64-pc-linux-gnu/15.2.1/../../../../lib/libcurl.so \
   /usr/lib/gcc/x86_64-pc-linux-gnu/15.2.1/../../../../lib/libpthread.a \
   /usr/lib/gcc/x86_64-pc-linux-gnu/15.2.1/../../../../lib/libstdc++.so \
@@ -100,6 +102,10 @@ CMakeFiles/test_llmchat.dir/src/llm/tool_exec.cpp.o:
 CMakeFiles/test_llmchat.dir/src/llm/persistent_shell.cpp.o:
 
 CMakeFiles/test_llmchat.dir/src/llm/provider.cpp.o:
+
+CMakeFiles/test_llmchat.dir/src/ui/markdown.cpp.o:
+
+CMakeFiles/test_llmchat.dir/src/ui/text_util.cpp.o:
 
 /usr/lib/gcc/x86_64-pc-linux-gnu/15.2.1/../../../../lib/libcurl.so:
 

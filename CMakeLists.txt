@@ -55,6 +55,8 @@ add_executable(test_llmchat
     src/llm/tool_exec.cpp
     src/llm/persistent_shell.cpp
     src/llm/provider.cpp
+    src/ui/markdown.cpp
+    src/ui/text_util.cpp
 )
 
 target_include_directories(test_llmchat PRIVATE

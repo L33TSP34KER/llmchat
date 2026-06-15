@@ -14,6 +14,8 @@ set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/run/media/wyene/disk/project/llmchat/src/llm/persistent_shell.cpp" "CMakeFiles/test_llmchat.dir/src/llm/persistent_shell.cpp.o" "gcc" "CMakeFiles/test_llmchat.dir/src/llm/persistent_shell.cpp.o.d"
   "/run/media/wyene/disk/project/llmchat/src/llm/provider.cpp" "CMakeFiles/test_llmchat.dir/src/llm/provider.cpp.o" "gcc" "CMakeFiles/test_llmchat.dir/src/llm/provider.cpp.o.d"
   "/run/media/wyene/disk/project/llmchat/src/llm/tool_exec.cpp" "CMakeFiles/test_llmchat.dir/src/llm/tool_exec.cpp.o" "gcc" "CMakeFiles/test_llmchat.dir/src/llm/tool_exec.cpp.o.d"
+  "/run/media/wyene/disk/project/llmchat/src/ui/markdown.cpp" "CMakeFiles/test_llmchat.dir/src/ui/markdown.cpp.o" "gcc" "CMakeFiles/test_llmchat.dir/src/ui/markdown.cpp.o.d"
+  "/run/media/wyene/disk/project/llmchat/src/ui/text_util.cpp" "CMakeFiles/test_llmchat.dir/src/ui/text_util.cpp.o" "gcc" "CMakeFiles/test_llmchat.dir/src/ui/text_util.cpp.o.d"
   "/run/media/wyene/disk/project/llmchat/test/test_flow.cpp" "CMakeFiles/test_llmchat.dir/test/test_flow.cpp.o" "gcc" "CMakeFiles/test_llmchat.dir/test/test_flow.cpp.o.d"
   "" "test_llmchat" "gcc" "CMakeFiles/test_llmchat.dir/link.d"
   )

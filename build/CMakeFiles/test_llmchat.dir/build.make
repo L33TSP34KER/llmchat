@@ -170,6 +170,34 @@ CMakeFiles/test_llmchat.dir/src/llm/provider.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/test_llmchat.dir/src/llm/provider.cpp.s"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /run/media/wyene/disk/project/llmchat/src/llm/provider.cpp -o CMakeFiles/test_llmchat.dir/src/llm/provider.cpp.s
 
+CMakeFiles/test_llmchat.dir/src/ui/markdown.cpp.o: CMakeFiles/test_llmchat.dir/flags.make
+CMakeFiles/test_llmchat.dir/src/ui/markdown.cpp.o: /run/media/wyene/disk/project/llmchat/src/ui/markdown.cpp
+CMakeFiles/test_llmchat.dir/src/ui/markdown.cpp.o: CMakeFiles/test_llmchat.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/run/media/wyene/disk/project/llmchat/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object CMakeFiles/test_llmchat.dir/src/ui/markdown.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/test_llmchat.dir/src/ui/markdown.cpp.o -MF CMakeFiles/test_llmchat.dir/src/ui/markdown.cpp.o.d -o CMakeFiles/test_llmchat.dir/src/ui/markdown.cpp.o -c /run/media/wyene/disk/project/llmchat/src/ui/markdown.cpp
+
+CMakeFiles/test_llmchat.dir/src/ui/markdown.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/test_llmchat.dir/src/ui/markdown.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /run/media/wyene/disk/project/llmchat/src/ui/markdown.cpp > CMakeFiles/test_llmchat.dir/src/ui/markdown.cpp.i
+
+CMakeFiles/test_llmchat.dir/src/ui/markdown.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/test_llmchat.dir/src/ui/markdown.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /run/media/wyene/disk/project/llmchat/src/ui/markdown.cpp -o CMakeFiles/test_llmchat.dir/src/ui/markdown.cpp.s
+
+CMakeFiles/test_llmchat.dir/src/ui/text_util.cpp.o: CMakeFiles/test_llmchat.dir/flags.make
+CMakeFiles/test_llmchat.dir/src/ui/text_util.cpp.o: /run/media/wyene/disk/project/llmchat/src/ui/text_util.cpp
+CMakeFiles/test_llmchat.dir/src/ui/text_util.cpp.o: CMakeFiles/test_llmchat.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/run/media/wyene/disk/project/llmchat/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object CMakeFiles/test_llmchat.dir/src/ui/text_util.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/test_llmchat.dir/src/ui/text_util.cpp.o -MF CMakeFiles/test_llmchat.dir/src/ui/text_util.cpp.o.d -o CMakeFiles/test_llmchat.dir/src/ui/text_util.cpp.o -c /run/media/wyene/disk/project/llmchat/src/ui/text_util.cpp
+
+CMakeFiles/test_llmchat.dir/src/ui/text_util.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/test_llmchat.dir/src/ui/text_util.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /run/media/wyene/disk/project/llmchat/src/ui/text_util.cpp > CMakeFiles/test_llmchat.dir/src/ui/text_util.cpp.i
+
+CMakeFiles/test_llmchat.dir/src/ui/text_util.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/test_llmchat.dir/src/ui/text_util.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /run/media/wyene/disk/project/llmchat/src/ui/text_util.cpp -o CMakeFiles/test_llmchat.dir/src/ui/text_util.cpp.s
+
 # Object files for target test_llmchat
 test_llmchat_OBJECTS = \
 "CMakeFiles/test_llmchat.dir/test/test_flow.cpp.o" \
@@ -178,7 +206,9 @@ test_llmchat_OBJECTS = \
 "CMakeFiles/test_llmchat.dir/src/conversation.cpp.o" \
 "CMakeFiles/test_llmchat.dir/src/llm/tool_exec.cpp.o" \
 "CMakeFiles/test_llmchat.dir/src/llm/persistent_shell.cpp.o" \
-"CMakeFiles/test_llmchat.dir/src/llm/provider.cpp.o"
+"CMakeFiles/test_llmchat.dir/src/llm/provider.cpp.o" \
+"CMakeFiles/test_llmchat.dir/src/ui/markdown.cpp.o" \
+"CMakeFiles/test_llmchat.dir/src/ui/text_util.cpp.o"
 
 # External object files for target test_llmchat
 test_llmchat_EXTERNAL_OBJECTS =
@@ -190,10 +220,12 @@ test_llmchat: CMakeFiles/test_llmchat.dir/src/conversation.cpp.o
 test_llmchat: CMakeFiles/test_llmchat.dir/src/llm/tool_exec.cpp.o
 test_llmchat: CMakeFiles/test_llmchat.dir/src/llm/persistent_shell.cpp.o
 test_llmchat: CMakeFiles/test_llmchat.dir/src/llm/provider.cpp.o
+test_llmchat: CMakeFiles/test_llmchat.dir/src/ui/markdown.cpp.o
+test_llmchat: CMakeFiles/test_llmchat.dir/src/ui/text_util.cpp.o
 test_llmchat: CMakeFiles/test_llmchat.dir/build.make
 test_llmchat: CMakeFiles/test_llmchat.dir/compiler_depend.ts
 test_llmchat: CMakeFiles/test_llmchat.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/run/media/wyene/disk/project/llmchat/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Linking CXX executable test_llmchat"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/run/media/wyene/disk/project/llmchat/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Linking CXX executable test_llmchat"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/test_llmchat.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

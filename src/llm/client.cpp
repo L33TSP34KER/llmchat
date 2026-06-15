@@ -235,8 +235,7 @@ void LlmClient::process_message(const std::string& content, const std::string& s
         std::string payload = build_payload(history, include_tools);
 
         std::string accumulated_content;
-        std::string pending_tool_name;
-        std::string pending_tool_args;
+        std::vector<ToolCall> pending_tool_calls;
         bool got_tool_call = false;
 
         provider_->set_stream_callback([&](const StreamEvent& ev) {
@@ -250,10 +249,15 @@ void LlmClient::process_message(const std::string& content, const std::string& s
                     break;
                 case StreamEvent::TOOL_CALL:
                     got_tool_call = true;
-                    if (ev.tool_data.contains("name"))
-                        pending_tool_name = ev.tool_data["name"].get<std::string>();
-                    if (ev.tool_data.contains("arguments"))
-                        pending_tool_args = ev.tool_data["arguments"].get<std::string>();
+                    pending_tool_calls.clear();
+                    if (ev.tool_data.contains("calls")) {
+                        for (auto& call : ev.tool_data["calls"]) {
+                            ToolCall tc;
+                            tc.name = call.value("name", "");
+                            tc.arguments = call.value("arguments", "");
+                            pending_tool_calls.push_back(tc);
+                        }
+                    }
                     if (stream_cb_) stream_cb_(ev);
                     break;
                 case StreamEvent::DONE: {
@@ -287,54 +291,61 @@ void LlmClient::process_message(const std::string& content, const std::string& s
         }
 
         if (got_tool_call) {
+            // Build assistant message with all tool calls
             Message asst_tool;
             asst_tool.role = "assistant";
             asst_tool.content = accumulated_content;
-            json tc = json::array();
-            json tc_entry;
-            tc_entry["id"] = "call_" + std::to_string(messages_.size());
-            tc_entry["type"] = "function";
-            tc_entry["function"]["name"] = pending_tool_name;
-            tc_entry["function"]["arguments"] = pending_tool_args;
-            tc.push_back(tc_entry);
-            asst_tool.tool_calls = tc;
+            json tc_arr = json::array();
+            int call_idx = 0;
+            for (auto& ptc : pending_tool_calls) {
+                json tc_entry;
+                tc_entry["id"] = "call_" + std::to_string(messages_.size()) + "_" + std::to_string(call_idx++);
+                tc_entry["type"] = "function";
+                tc_entry["function"]["name"] = ptc.name;
+                tc_entry["function"]["arguments"] = ptc.arguments;
+                tc_arr.push_back(tc_entry);
+            }
+            asst_tool.tool_calls = tc_arr;
             messages_.push_back(asst_tool);
 
-            ToolDefinition* tool_def = nullptr;
-            for (auto& t : config_->tools) {
-                if (t.name == pending_tool_name) { tool_def = &t; break; }
-            }
+            // Execute each tool and add results
+            for (auto& ptc : pending_tool_calls) {
+                ToolDefinition* tool_def = nullptr;
+                for (auto& t : config_->tools) {
+                    if (t.name == ptc.name) { tool_def = &t; break; }
+                }
 
-            if (!tool_def) {
+                if (!tool_def) {
+                    Message tool_msg;
+                    tool_msg.role = "tool";
+                    tool_msg.content = "Error: Unknown tool '" + ptc.name + "'";
+                    tool_msg.tool_call_id = "call_" + std::to_string(messages_.size());
+                    tool_msg.tool_name = ptc.name;
+                    messages_.push_back(tool_msg);
+                    if (stream_cb_) stream_cb_({StreamEvent::ERROR, "Unknown tool: " + ptc.name, json(), ""});
+                    continue;
+                }
+
+                std::string result;
+                if (tool_exec::is_mcp_tool(ptc.name)) {
+                    result = "Error: MCP tools must be executed via MCPManager";
+                } else {
+                    result = tool_exec::execute_shell(*tool_def, ptc.arguments);
+                }
+
                 Message tool_msg;
                 tool_msg.role = "tool";
-                tool_msg.content = "Error: Unknown tool '" + pending_tool_name + "'";
+                tool_msg.content = result;
                 tool_msg.tool_call_id = "call_" + std::to_string(messages_.size());
-                tool_msg.tool_name = pending_tool_name;
+                tool_msg.tool_name = ptc.name;
                 messages_.push_back(tool_msg);
-                if (stream_cb_) stream_cb_({StreamEvent::ERROR, "Unknown tool: " + pending_tool_name, json(), ""});
-                continue;
-            }
 
-            std::string result;
-            if (tool_exec::is_mcp_tool(pending_tool_name)) {
-                result = "Error: MCP tools must be executed via MCPManager";
-            } else {
-                result = tool_exec::execute_shell(*tool_def, pending_tool_args);
-            }
-
-            Message tool_msg;
-            tool_msg.role = "tool";
-            tool_msg.content = result;
-            tool_msg.tool_call_id = "call_" + std::to_string(messages_.size());
-            tool_msg.tool_name = pending_tool_name;
-            messages_.push_back(tool_msg);
-
-            if (stream_cb_) {
-                StreamEvent se;
-                se.type = StreamEvent::TOKEN;
-                se.text = "\n[Tool " + pending_tool_name + " returned: " + result.substr(0, 200) + "]\n";
-                stream_cb_(se);
+                if (stream_cb_) {
+                    StreamEvent se;
+                    se.type = StreamEvent::TOKEN;
+                    se.text = "\n[Tool " + ptc.name + " returned: " + result.substr(0, 200) + "]\n";
+                    stream_cb_(se);
+                }
             }
             continue;
         }
@@ -395,8 +406,7 @@ void LlmClient::process_message_deep_search(const std::string& content) {
         std::string payload = build_payload(history, include_tools);
 
         std::string accumulated_content;
-        std::string pending_tool_name;
-        std::string pending_tool_args;
+        std::vector<ToolCall> pending_tool_calls;
         bool got_tool_call = false;
 
         provider_->set_stream_callback([&](const StreamEvent& ev) {
@@ -410,10 +420,15 @@ void LlmClient::process_message_deep_search(const std::string& content) {
                     break;
                 case StreamEvent::TOOL_CALL:
                     got_tool_call = true;
-                    if (ev.tool_data.contains("name"))
-                        pending_tool_name = ev.tool_data["name"].get<std::string>();
-                    if (ev.tool_data.contains("arguments"))
-                        pending_tool_args = ev.tool_data["arguments"].get<std::string>();
+                    pending_tool_calls.clear();
+                    if (ev.tool_data.contains("calls")) {
+                        for (auto& call : ev.tool_data["calls"]) {
+                            ToolCall tc;
+                            tc.name = call.value("name", "");
+                            tc.arguments = call.value("arguments", "");
+                            pending_tool_calls.push_back(tc);
+                        }
+                    }
                     if (stream_cb_) stream_cb_(ev);
                     break;
                 case StreamEvent::DONE: {
@@ -451,59 +466,64 @@ void LlmClient::process_message_deep_search(const std::string& content) {
             tool_turns++;
             got_tool_call = false;
 
+            // Build assistant message with all tool calls
             Message asst_tool;
             asst_tool.role = "assistant";
             asst_tool.content = accumulated_content;
-            json tc = json::array();
-            json tc_entry;
-            tc_entry["id"] = "call_" + std::to_string(messages_.size());
-            tc_entry["type"] = "function";
-            tc_entry["function"]["name"] = pending_tool_name;
-            tc_entry["function"]["arguments"] = pending_tool_args;
-            tc.push_back(tc_entry);
-            asst_tool.tool_calls = tc;
+            json tc_arr = json::array();
+            int call_idx = 0;
+            for (auto& ptc : pending_tool_calls) {
+                json tc_entry;
+                tc_entry["id"] = "call_" + std::to_string(messages_.size()) + "_" + std::to_string(call_idx++);
+                tc_entry["type"] = "function";
+                tc_entry["function"]["name"] = ptc.name;
+                tc_entry["function"]["arguments"] = ptc.arguments;
+                tc_arr.push_back(tc_entry);
+            }
+            asst_tool.tool_calls = tc_arr;
             messages_.push_back(asst_tool);
 
-            ToolDefinition* tool_def = nullptr;
-            for (auto& t : config_->tools) {
-                if (t.name == pending_tool_name) { tool_def = &t; break; }
-            }
-
-            if (!tool_def) {
-                Message tool_msg;
-                tool_msg.role = "tool";
-                tool_msg.content = "Error: Unknown tool '" + pending_tool_name + "'";
-                tool_msg.tool_call_id = "call_" + std::to_string(messages_.size());
-                tool_msg.tool_name = pending_tool_name;
-                messages_.push_back(tool_msg);
-                if (stream_cb_) stream_cb_({StreamEvent::ERROR, "Unknown tool: " + pending_tool_name, json(), ""});
-            } else {
-                std::string result;
-                if (tool_exec::is_mcp_tool(pending_tool_name)) {
-                    result = "Error: MCP tools must be executed via MCPManager";
-                } else {
-                    result = tool_exec::execute_shell(*tool_def, pending_tool_args);
+            // Execute each tool and add results
+            for (auto& ptc : pending_tool_calls) {
+                ToolDefinition* tool_def = nullptr;
+                for (auto& t : config_->tools) {
+                    if (t.name == ptc.name) { tool_def = &t; break; }
                 }
 
-                Message tool_msg;
-                tool_msg.role = "tool";
-                tool_msg.content = result;
-                tool_msg.tool_call_id = "call_" + std::to_string(messages_.size());
-                tool_msg.tool_name = pending_tool_name;
-                messages_.push_back(tool_msg);
+                if (!tool_def) {
+                    Message tool_msg;
+                    tool_msg.role = "tool";
+                    tool_msg.content = "Error: Unknown tool '" + ptc.name + "'";
+                    tool_msg.tool_call_id = "call_" + std::to_string(messages_.size());
+                    tool_msg.tool_name = ptc.name;
+                    messages_.push_back(tool_msg);
+                    if (stream_cb_) stream_cb_({StreamEvent::ERROR, "Unknown tool: " + ptc.name, json(), ""});
+                } else {
+                    std::string result;
+                    if (tool_exec::is_mcp_tool(ptc.name)) {
+                        result = "Error: MCP tools must be executed via MCPManager";
+                    } else {
+                        result = tool_exec::execute_shell(*tool_def, ptc.arguments);
+                    }
 
-                if (stream_cb_) {
-                    StreamEvent se;
-                    se.type = StreamEvent::TOKEN;
-                    se.text = "\n[Tool " + pending_tool_name + " returned: " + result.substr(0, 200) + "]\n";
-                    stream_cb_(se);
+                    Message tool_msg;
+                    tool_msg.role = "tool";
+                    tool_msg.content = result;
+                    tool_msg.tool_call_id = "call_" + std::to_string(messages_.size());
+                    tool_msg.tool_name = ptc.name;
+                    messages_.push_back(tool_msg);
+
+                    if (stream_cb_) {
+                        StreamEvent se;
+                        se.type = StreamEvent::TOKEN;
+                        se.text = "\n[Tool " + ptc.name + " returned: " + result.substr(0, 200) + "]\n";
+                        stream_cb_(se);
+                    }
                 }
             }
 
             // Send tool results back to LLM
             accumulated_content.clear();
-            pending_tool_name.clear();
-            pending_tool_args.clear();
 
             history.clear();
             history.push_back(sys);
@@ -521,10 +541,15 @@ void LlmClient::process_message_deep_search(const std::string& content) {
                         break;
                     case StreamEvent::TOOL_CALL:
                         got_tool_call = true;
-                        if (ev.tool_data.contains("name"))
-                            pending_tool_name = ev.tool_data["name"].get<std::string>();
-                        if (ev.tool_data.contains("arguments"))
-                            pending_tool_args = ev.tool_data["arguments"].get<std::string>();
+                        pending_tool_calls.clear();
+                        if (ev.tool_data.contains("calls")) {
+                            for (auto& call : ev.tool_data["calls"]) {
+                                ToolCall tc;
+                                tc.name = call.value("name", "");
+                                tc.arguments = call.value("arguments", "");
+                                pending_tool_calls.push_back(tc);
+                            }
+                        }
                         if (stream_cb_) stream_cb_(ev);
                         break;
                     case StreamEvent::DONE: {
