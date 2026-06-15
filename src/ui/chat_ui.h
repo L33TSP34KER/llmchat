@@ -17,6 +17,7 @@ struct UIState {
     bool processing = false;
     std::string model_name;
     std::string status_text;
+    std::string thinking_phrase;
 };
 
 class ChatUI {
@@ -77,6 +78,12 @@ private:
 
     std::atomic<bool> should_exit_{false};
     std::atomic<bool> needs_redraw_{true};
+
+    // Bracketed paste mode
+    bool paste_mode_ = false;
+    std::string paste_buf_;
+    int esc_state_ = 0;
+    std::string esc_buf_;
 
     // Casino status bar state
     std::string casino_frame_;

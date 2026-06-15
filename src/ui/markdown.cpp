@@ -499,6 +499,23 @@ static std::vector<MdSeg> parse_inline(const std::string& line, bool in_list = f
                 }
             }
         }
+        // ![alt](url) image
+        if (line[i] == '!' && peek(1) == '[') {
+            flush();
+            size_t close_bracket = line.find("](", i + 2);
+            if (close_bracket != std::string::npos) {
+                std::string alt = line.substr(i + 2, close_bracket - i - 2);
+                size_t close_paren = line.find(")", close_bracket + 2);
+                if (close_paren != std::string::npos) {
+                    std::string url = line.substr(close_bracket + 2, close_paren - close_bracket - 2);
+                    buf = alt + "\n" + url;
+                    flush(MdSeg::IMAGE);
+                    i = close_paren + 1;
+                    continue;
+                }
+            }
+        }
+
         buf += line[i];
         i++;
     }
@@ -662,10 +679,34 @@ std::vector<MdLine> md_parse(const std::string& text, int width) {
         if (start != std::string::npos && raw_line[start] == '>') {
             std::string content = raw_line.substr(start + 1);
             content.erase(0, content.find_first_not_of(" \t"));
-            MdLine ml;
-            ml.is_blockquote = true;
-            ml.segs = parse_inline(content);
-            out.push_back(ml);
+            auto segs = parse_inline(content);
+            // Word-wrap blockquote content
+            {
+                int col = 0;
+                MdLine current;
+                current.is_blockquote = true;
+                for (auto& seg : segs) {
+                    std::string word;
+                    for (size_t ci = 0; ci < seg.text.size();) {
+                        size_t len = utf8_char_len((unsigned char)seg.text[ci]);
+                        word = seg.text.substr(ci, len);
+                        ci += len;
+                        if (col + str_width(word) > width && col > 0) {
+                            out.push_back(current);
+                            current = MdLine();
+                            current.is_blockquote = true;
+                            col = 0;
+                        }
+                        if (col == 0 && word == " ") continue;
+                        current.segs.push_back({seg.type, word, seg.level});
+                        col += str_width(word);
+                    }
+                }
+                if (!current.segs.empty())
+                    out.push_back(current);
+                else
+                    out.push_back({});
+            }
             continue;
         }
 
@@ -686,7 +727,31 @@ std::vector<MdLine> md_parse(const std::string& text, int width) {
                     s.level = level;
                     ml.segs.push_back(s);
                 }
-                out.push_back(ml);
+                // Word-wrap headings like regular lines
+                {
+                    int col = 0;
+                    MdLine current;
+                    for (auto& seg : ml.segs) {
+                        std::string word;
+                        for (size_t ci = 0; ci < seg.text.size();) {
+                            size_t len = utf8_char_len((unsigned char)seg.text[ci]);
+                            word = seg.text.substr(ci, len);
+                            ci += len;
+                            if (col + str_width(word) > width && col > 0) {
+                                out.push_back(current);
+                                current = MdLine();
+                                col = 0;
+                            }
+                            if (col == 0 && word == " ") continue;
+                            current.segs.push_back({seg.type, word, seg.level});
+                            col += str_width(word);
+                        }
+                    }
+                    if (!current.segs.empty())
+                        out.push_back(current);
+                    else
+                        out.push_back({});
+                }
                 continue;
             }
         }
@@ -725,7 +790,38 @@ std::vector<MdLine> md_parse(const std::string& text, int width) {
                     ml.segs.push_back(marker);
                 }
                 for (auto& s : segs) ml.segs.push_back(s);
-                out.push_back(ml);
+                // Word-wrap list items like regular lines
+                int list_col = 0;
+                MdLine wrapped;
+                for (auto& seg : ml.segs) {
+                    if (seg.type == MdSeg::LIST_ITEM || seg.type == MdSeg::TASK_DONE || seg.type == MdSeg::TASK_PENDING) {
+                        if (list_col > 0 && list_col + str_width(seg.text) > width) {
+                            out.push_back(wrapped);
+                            wrapped = MdLine();
+                            list_col = 0;
+                        }
+                        wrapped.segs.push_back(seg);
+                        list_col += str_width(seg.text);
+                        continue;
+                    }
+                    std::string word;
+                    for (size_t ci = 0; ci < seg.text.size();) {
+                        size_t len = utf8_char_len((unsigned char)seg.text[ci]);
+                        word = seg.text.substr(ci, len);
+                        ci += len;
+                        if (list_col + str_width(word) > width && list_col > 0) {
+                            out.push_back(wrapped);
+                            wrapped = MdLine();
+                            list_col = 0;
+                        }
+                        if (list_col == 0 && word == " ") continue;
+                        wrapped.segs.push_back({seg.type, word, seg.level});
+                        list_col += str_width(word);
+                    }
+                }
+                if (wrapped.segs.empty())
+                    wrapped = ml;
+                out.push_back(wrapped);
                 continue;
             }
         }

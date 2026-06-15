@@ -65,10 +65,8 @@ void ChatUI::init_ncurses() {
     start_color();
     use_default_colors();
 
-    mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, NULL);
-    mouseinterval(0);
     nodelay(stdscr, TRUE);
-    printf("\033[?1003h\033[?1006h");
+    printf("\033[?2004h");  // enable bracketed paste
 
     getmaxyx(stdscr, term_height_, term_width_);
     create_windows();
@@ -80,7 +78,7 @@ void ChatUI::init_ncurses() {
 }
 
 void ChatUI::cleanup_ncurses() {
-    printf("\033[?1003l\033[?1006l");
+    printf("\033[?1000l\033[?1002l\033[?1003l\033[?1006l\033[?2004l");
     destroy_windows();
     endwin();
 }
@@ -152,11 +150,41 @@ void ChatUI::draw_all() {
         renderer_.draw_input(input_buf_, cursor_pos_, state_.processing, animation_.get_color_index(), anim_frame_, non_system);
     }
     renderer_.draw_status(state_.processing, use_casino_status_, casino_frame_,
-                          state_.model_name, state_.status_text);
+                          state_.model_name, state_.status_text,
+                          anim_frame_, state_.thinking_phrase);
     doupdate();
 }
 
 void ChatUI::handle_input(int ch) {
+    // Bracketed paste escape sequence handling
+    if (esc_state_ > 0) {
+        esc_buf_ += (char)ch;
+        if (ch == '~') {
+            esc_state_ = 0;
+            if (esc_buf_ == "[200~") {
+                paste_mode_ = true;
+                paste_buf_.clear();
+            } else if (esc_buf_ == "[201~") {
+                paste_mode_ = false;
+                for (char c : paste_buf_)
+                    insert_char(c);
+                update_input_height();
+            }
+        } else if (esc_buf_.size() > 6) {
+            esc_state_ = 0;
+        }
+        return;
+    }
+    if (ch == 27) {
+        esc_state_ = 1;
+        esc_buf_.clear();
+        return;
+    }
+    if (paste_mode_) {
+        paste_buf_ += (char)ch;
+        return;
+    }
+
     switch (ch) {
         case KEY_RESIZE:
             handle_resize();
@@ -204,7 +232,10 @@ void ChatUI::handle_input(int ch) {
             return;
 
         case KEY_UP:
-            if (!input_history_.empty()) {
+            if (input_buf_.empty()) {
+                // Input empty → scroll wheel via alternate scroll mode
+                scroll_up(1);
+            } else if (!input_history_.empty()) {
                 if (history_pos_ < 0) history_pos_ = input_history_.size() - 1;
                 else if (history_pos_ > 0) history_pos_--;
                 if (history_pos_ >= 0 && history_pos_ < (int)input_history_.size()) {
@@ -215,7 +246,9 @@ void ChatUI::handle_input(int ch) {
             return;
 
         case KEY_DOWN:
-            if (history_pos_ >= 0) {
+            if (input_buf_.empty()) {
+                scroll_down(1);
+            } else if (history_pos_ >= 0) {
                 history_pos_++;
                 if (history_pos_ >= (int)input_history_.size()) {
                     history_pos_ = -1;
@@ -234,39 +267,6 @@ void ChatUI::handle_input(int ch) {
         case KEY_SF:
             scroll_down(3);
             return;
-
-        case KEY_MOUSE: {
-            MEVENT event;
-            if (getmouse(&event) == OK) {
-                if (event.bstate & BUTTON1_CLICKED) {
-                    // Check if click is on tamagotchi (top-right corner)
-                    int face_w = 5;
-                    if (event.y == 0 && event.x >= term_width_ - face_w - 4 &&
-                        event.x < term_width_ - 2) {
-                        tamagotchi_mood_ = TAMAGOTCHI_HAPPY;
-                        state_.status_text = "*pet*";
-                        last_input_time_ = std::chrono::steady_clock::now();
-                    } else if (event.y < chat_height_ && clipboard_cb_) {
-                        int ei = renderer_.entry_at_y(event.y, scroll_offset_);
-                        if (ei >= 0) {
-                            auto entries = conv_->get_entries();
-                            if (ei < (int)entries.size()) {
-                                if (clipboard_cb_(entries[ei].content)) {
-                                    state_.status_text = "Copied message " + std::to_string(ei+1);
-                                } else {
-                                    state_.status_text = "Copy failed";
-                                }
-                            }
-                        }
-                    }
-                } else if (event.bstate & BUTTON4_PRESSED) {
-                    scroll_up(1);
-                } else if (event.bstate & BUTTON5_PRESSED) {
-                    scroll_down(1);
-                }
-            }
-            return;
-        }
 
         case 3:
             state_.status_text = "Cancelling...";
@@ -291,7 +291,7 @@ void ChatUI::handle_input(int ch) {
             if (input_buf_.empty()) return;
             std::vector<std::string> completions = {
                 "/clear", "/cls", "/help", "/skill",
-                "/deepsearch", "/stats", "/model", "/export"
+                "/deepsearch", "/stats", "/model", "/export", "/copy"
             };
             for (auto& s : config_->skills) {
                 completions.push_back("/skill " + s.name);
@@ -393,6 +393,27 @@ void ChatUI::send_message() {
         }
         if (cmd.substr(0, 6) == "skill ") {
             state_.status_text = "Skill set";
+            input_buf_.clear();
+            cursor_pos_ = 0;
+            return;
+        }
+        if (cmd.substr(0, 5) == "copy ") {
+            std::string num = cmd.substr(5);
+            num.erase(0, num.find_first_not_of(" \t"));
+            num.erase(num.find_last_not_of(" \t") + 1);
+            int idx = atoi(num.c_str());
+            if (idx <= 0) {
+                state_.status_text = "Usage: /copy <message number>";
+            } else {
+                auto entries = conv_->get_entries();
+                if (idx > (int)entries.size()) {
+                    state_.status_text = "Only " + std::to_string(entries.size()) + " messages";
+                } else if (clipboard_cb_(entries[idx-1].content)) {
+                    state_.status_text = "Copied message " + num;
+                } else {
+                    state_.status_text = "Copy failed";
+                }
+            }
             input_buf_.clear();
             cursor_pos_ = 0;
             return;

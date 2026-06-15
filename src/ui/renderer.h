@@ -20,7 +20,8 @@ public:
     void draw_chat(Conversation* conv, int scroll_offset, bool is_streaming, int anim_color_idx, int tamagotchi_mood = TAMAGOTCHI_HAPPY, int anim_frame = 0);
     void draw_input(const std::string& input_buf, int cursor_pos, bool is_processing, int anim_color_idx, int anim_frame = 0, int msg_count = 0);
     void draw_status(bool is_processing, bool use_casino_status, const std::string& casino_frame,
-                     const std::string& model_name, const std::string& status_text);
+                     const std::string& model_name, const std::string& status_text,
+                     int anim_frame = 0, const std::string& thinking_phrase = "");
     int compute_total_box_lines(Conversation* conv, int max_x);
 
     static void ncurses_color_to_rgb(int c, float& r, float& g, float& b);

@@ -56,6 +56,7 @@ int main(int argc, char* argv[]) {
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
 
+    srand(time(nullptr));
     Config config = Config::load();
 
     // CLI args override
@@ -202,8 +203,42 @@ int main(int argc, char* argv[]) {
                 ui.notify_update();
                 break;
             }
-            case StreamEvent::REASONING:
+            case StreamEvent::REASONING: {
+                if (uistate.thinking_phrase.empty()) {
+                    static const char* thinking_phrases[] = {
+                        "Pondering the mysteries of the universe",
+                        "Consulting the ancient scrolls",
+                        "Gathering starlight for an answer",
+                        "Brewing a potion of knowledge",
+                        "Polishing the crystal ball",
+                        "Feeding the hamsters in the thought-machine",
+                        "Summoning a knowledgeable djinn",
+                        "Reading tea leaves",
+                        "Contemplating the meaning of 42",
+                        "Whispering to the oracle",
+                        "Dusting off the old textbooks",
+                        "Staring intensely at the abyss",
+                        "Sharpening the reasoning pencils",
+                        "Walking the garden of forking paths",
+                        "Rewinding the tape of thought",
+                        "Chasing down a runaway idea",
+                        "Connecting dots in hyperspace",
+                        "Refueling the logic engines",
+                        "Marinating in deep thought",
+                        "Shaking the answer tree",
+                        "Flipping through the great book of answers",
+                        "Consulting the inner council of wisdom",
+                        "Traversing the neural pathways",
+                        "Unspooling the thread of logic",
+                        "Decanting a fine vintage of reasoning",
+                    };
+                    int idx = rand() % 25;
+                    uistate.thinking_phrase = thinking_phrases[idx];
+                    uistate.status_text = "";
+                    ui.set_state(uistate);
+                }
                 break;
+            }
             case StreamEvent::CLEAR_STREAMING: {
                 conv.clear_streaming();
                 break;
@@ -241,6 +276,7 @@ int main(int argc, char* argv[]) {
                 conv.clear_streaming();
                 uistate.processing = false;
                 uistate.status_text = "";
+                uistate.thinking_phrase = "";
                 ui.set_state(uistate);
                 break;
             }
@@ -351,6 +387,7 @@ int main(int argc, char* argv[]) {
                     "| `/stats` | Show session statistics |\n"
                     "| `/model <name>` | Switch model (session only) |\n"
                     "| `/export` | Export conversation to markdown |\n"
+                    "| `/copy <N>` | Copy message N to clipboard |\n"
                     "\n"
                     "### Shortcuts\n"
                     "\n"
