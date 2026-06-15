@@ -343,9 +343,25 @@ static std::vector<SegLine> build_seg_lines(Conversation* conv, int max_x,
             if (md_line.is_code_block) {
                 auto code_lines = wrap_text(md_line.segs[0].text, content_w);
                 if (code_lines.empty()) code_lines = {" "};
+                // Header fence
+                {
+                    SegLine sl;
+                    std::string fence = " ";
+                    for (int i = 0; i < content_w; i++) fence += "\xe2\x94\x80";
+                    sl.segs.push_back({4, A_BOLD, fence});
+                    seg_lines.push_back(sl);
+                }
                 for (size_t ci = 0; ci < code_lines.size(); ci++) {
                     SegLine sl;
-                    sl.segs.push_back({color, A_DIM, " \xe2\x96\x8c " + code_lines[ci]}); // " ▌ "
+                    sl.segs.push_back({4, A_NORMAL, " \xe2\x96\x8c " + code_lines[ci]});
+                    seg_lines.push_back(sl);
+                }
+                // Footer fence
+                {
+                    SegLine sl;
+                    std::string fence = " ";
+                    for (int i = 0; i < content_w; i++) fence += "\xe2\x94\x80";
+                    sl.segs.push_back({4, A_BOLD, fence});
                     seg_lines.push_back(sl);
                 }
                 continue;
@@ -377,11 +393,14 @@ static std::vector<SegLine> build_seg_lines(Conversation* conv, int max_x,
                 } else if (seg.type == MdSeg::STRIKETHROUGH) {
                     rs.attr = A_DIM;
                 } else if (seg.type == MdSeg::CODE) {
-                    rs.attr = A_DIM;
+                    rs.color = 4;
+                    rs.attr = A_BOLD;
                 } else if (seg.type == MdSeg::MATH) {
-                    rs.attr = A_DIM;
+                    rs.color = 3;
+                    rs.attr = A_BOLD;
                 } else if (seg.type == MdSeg::DISPLAY_MATH) {
-                    rs.attr = A_DIM | A_BOLD;
+                    rs.color = 3;
+                    rs.attr = A_BOLD;
                 } else if (seg.type == MdSeg::BLOCKQUOTE) {
                     rs.attr = A_DIM;
                     seg.text = "\xe2\x96\x8d " + seg.text; // "▍ "
