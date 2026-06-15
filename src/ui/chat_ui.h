@@ -59,7 +59,7 @@ private:
     WINDOW* status_win_ = nullptr;
 
     int chat_height_ = 0;
-    int input_height_ = 4;
+    int input_height_ = 3;
     int status_height_ = 1;
     int term_width_ = 0;
     int term_height_ = 0;
@@ -89,6 +89,11 @@ private:
     std::string status_content_;
     bool use_casino_status_ = false;
 
+    // Tamagotchi state
+    std::chrono::steady_clock::time_point last_input_time_;
+    int tamagotchi_mood_ = TAMAGOTCHI_HAPPY;
+
+    void update_tamagotchi_mood();
     void init_ncurses();
     void cleanup_ncurses();
     void handle_resize();

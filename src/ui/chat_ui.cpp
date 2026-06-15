@@ -12,6 +12,7 @@ ChatUI::ChatUI(Conversation* conv, Config* config)
     : conv_(conv), config_(config) {
     theme_ = config->get_theme();
     use_casino_status_ = theme_.casino_status_bar;
+    last_input_time_ = std::chrono::steady_clock::now();
 }
 
 ChatUI::~ChatUI() {
@@ -123,12 +124,14 @@ void ChatUI::draw_all() {
         update_casino_status();
     }
 
+    update_tamagotchi_mood();
+
     int total = renderer_.compute_total_box_lines(conv_, term_width_);
     if (scroll_offset_ >= total - chat_height_) {
         scroll_offset_ = std::max(0, total - chat_height_);
     }
 
-    renderer_.draw_chat(conv_, scroll_offset_, state_.processing, animation_.get_color_index());
+    renderer_.draw_chat(conv_, scroll_offset_, state_.processing, animation_.get_color_index(), tamagotchi_mood_);
     renderer_.draw_input(input_buf_, cursor_pos_, state_.processing, animation_.get_color_index());
     renderer_.draw_status(state_.processing, use_casino_status_, casino_frame_,
                           state_.model_name, state_.status_text);
@@ -263,6 +266,21 @@ void ChatUI::delete_char() {
     }
 }
 
+void ChatUI::update_tamagotchi_mood() {
+    auto now = std::chrono::steady_clock::now();
+    auto idle = std::chrono::duration_cast<std::chrono::seconds>(now - last_input_time_).count();
+
+    if (state_.processing) {
+        tamagotchi_mood_ = TAMAGOTCHI_HAPPY;
+    } else if (idle < 30) {
+        tamagotchi_mood_ = TAMAGOTCHI_HAPPY;
+    } else if (idle < 120) {
+        tamagotchi_mood_ = TAMAGOTCHI_NEUTRAL;
+    } else {
+        tamagotchi_mood_ = TAMAGOTCHI_SAD;
+    }
+}
+
 void ChatUI::send_message() {
     std::string msg = input_buf_;
     if (msg.empty()) return;
@@ -283,6 +301,7 @@ void ChatUI::send_message() {
             scroll_offset_ = 0;
             input_buf_.clear();
             cursor_pos_ = 0;
+            last_input_time_ = std::chrono::steady_clock::now();
             if (clear_cb_) clear_cb_();
             return;
         }
@@ -310,6 +329,7 @@ void ChatUI::send_message() {
             state_.status_text = "Deep search started...";
             input_buf_.clear();
             cursor_pos_ = 0;
+            last_input_time_ = std::chrono::steady_clock::now();
             if (deep_search_cb_) deep_search_cb_(query);
             return;
         }
@@ -323,6 +343,7 @@ void ChatUI::send_message() {
 
     input_buf_.clear();
     cursor_pos_ = 0;
+    last_input_time_ = std::chrono::steady_clock::now();
 
     if (send_cb_) send_cb_(msg);
 }
