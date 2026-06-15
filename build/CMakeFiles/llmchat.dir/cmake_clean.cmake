@@ -1,0 +1,40 @@
+file(REMOVE_RECURSE
+  "CMakeFiles/llmchat.dir/link.d"
+  "CMakeFiles/llmchat.dir/src/config.cpp.o"
+  "CMakeFiles/llmchat.dir/src/config.cpp.o.d"
+  "CMakeFiles/llmchat.dir/src/conversation.cpp.o"
+  "CMakeFiles/llmchat.dir/src/conversation.cpp.o.d"
+  "CMakeFiles/llmchat.dir/src/http_client.cpp.o"
+  "CMakeFiles/llmchat.dir/src/http_client.cpp.o.d"
+  "CMakeFiles/llmchat.dir/src/llm/client.cpp.o"
+  "CMakeFiles/llmchat.dir/src/llm/client.cpp.o.d"
+  "CMakeFiles/llmchat.dir/src/llm/persistent_shell.cpp.o"
+  "CMakeFiles/llmchat.dir/src/llm/persistent_shell.cpp.o.d"
+  "CMakeFiles/llmchat.dir/src/llm/provider.cpp.o"
+  "CMakeFiles/llmchat.dir/src/llm/provider.cpp.o.d"
+  "CMakeFiles/llmchat.dir/src/llm/tool_exec.cpp.o"
+  "CMakeFiles/llmchat.dir/src/llm/tool_exec.cpp.o.d"
+  "CMakeFiles/llmchat.dir/src/main.cpp.o"
+  "CMakeFiles/llmchat.dir/src/main.cpp.o.d"
+  "CMakeFiles/llmchat.dir/src/mcp/client.cpp.o"
+  "CMakeFiles/llmchat.dir/src/mcp/client.cpp.o.d"
+  "CMakeFiles/llmchat.dir/src/mcp/manager.cpp.o"
+  "CMakeFiles/llmchat.dir/src/mcp/manager.cpp.o.d"
+  "CMakeFiles/llmchat.dir/src/ui/animation.cpp.o"
+  "CMakeFiles/llmchat.dir/src/ui/animation.cpp.o.d"
+  "CMakeFiles/llmchat.dir/src/ui/chat_ui.cpp.o"
+  "CMakeFiles/llmchat.dir/src/ui/chat_ui.cpp.o.d"
+  "CMakeFiles/llmchat.dir/src/ui/markdown.cpp.o"
+  "CMakeFiles/llmchat.dir/src/ui/markdown.cpp.o.d"
+  "CMakeFiles/llmchat.dir/src/ui/renderer.cpp.o"
+  "CMakeFiles/llmchat.dir/src/ui/renderer.cpp.o.d"
+  "CMakeFiles/llmchat.dir/src/ui/text_util.cpp.o"
+  "CMakeFiles/llmchat.dir/src/ui/text_util.cpp.o.d"
+  "llmchat"
+  "llmchat.pdb"
+)
+
+# Per-language clean rules from dependency scanning.
+foreach(lang CXX)
+  include(CMakeFiles/llmchat.dir/cmake_clean_${lang}.cmake OPTIONAL)
+endforeach()

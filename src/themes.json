@@ -1,0 +1,225 @@
+{
+  "default": {
+    "user_fg": 3, "user_bg": -1, "assistant_fg": 6, "assistant_bg": -1,
+    "system_fg": 4, "system_bg": -1, "tool_fg": 5, "tool_bg": -1,
+    "error_fg": 1, "error_bg": -1, "status_fg": 7, "status_bg": 4,
+    "input_fg": -1, "input_bg": -1, "separator_fg": 8, "separator_bg": -1
+  },
+  "dark": {
+    "user_fg": 3, "user_bg": -1, "assistant_fg": 6, "assistant_bg": -1,
+    "system_fg": 4, "system_bg": -1, "tool_fg": 5, "tool_bg": -1,
+    "error_fg": 1, "error_bg": -1, "status_fg": 0, "status_bg": 4,
+    "input_fg": -1, "input_bg": -1, "separator_fg": 8, "separator_bg": -1
+  },
+  "monokai": {
+    "user_fg": 6, "user_bg": -1, "assistant_fg": 2, "assistant_bg": -1,
+    "system_fg": 5, "system_bg": -1, "tool_fg": 3, "tool_bg": -1,
+    "error_fg": 1, "error_bg": -1, "status_fg": 7, "status_bg": 5,
+    "input_fg": 2, "input_bg": -1, "separator_fg": 8, "separator_bg": -1
+  },
+  "gruvbox": {
+    "user_fg": 3, "user_bg": -1, "assistant_fg": 2, "assistant_bg": -1,
+    "system_fg": 6, "system_bg": -1, "tool_fg": 5, "tool_bg": -1,
+    "error_fg": 1, "error_bg": -1, "status_fg": 0, "status_bg": 3,
+    "input_fg": -1, "input_bg": -1, "separator_fg": 8, "separator_bg": -1
+  },
+  "dracula": {
+    "user_fg": 5, "user_bg": -1, "assistant_fg": 6, "assistant_bg": -1,
+    "system_fg": 4, "system_bg": -1, "tool_fg": 2, "tool_bg": -1,
+    "error_fg": 1, "error_bg": -1, "status_fg": 7, "status_bg": 5,
+    "input_fg": -1, "input_bg": -1, "separator_fg": 8, "separator_bg": -1
+  },
+  "casino": {
+    "user_fg": 3, "user_bg": -1, "assistant_fg": 2, "assistant_bg": -1,
+    "system_fg": 5, "system_bg": -1, "tool_fg": 6, "tool_bg": -1,
+    "error_fg": 1, "error_bg": -1, "status_fg": 3, "status_bg": 1,
+    "input_fg": -1, "input_bg": -1, "separator_fg": 8, "separator_bg": -1,
+    "slot_machine_animation": true, "casino_status_bar": true
+  },
+  "tokyo-night": {
+    "user_fg": 7, "user_bg": -1, "assistant_fg": 6, "assistant_bg": -1,
+    "system_fg": 5, "system_bg": -1, "tool_fg": 2, "tool_bg": -1,
+    "error_fg": 1, "error_bg": -1, "status_fg": 6, "status_bg": 4,
+    "input_fg": 6, "input_bg": -1, "separator_fg": 8, "separator_bg": -1
+  },
+  "catppuccino": {
+    "user_fg": 5, "user_bg": -1, "assistant_fg": 2, "assistant_bg": -1,
+    "system_fg": 6, "system_bg": -1, "tool_fg": 3, "tool_bg": -1,
+    "error_fg": 1, "error_bg": -1, "status_fg": 0, "status_bg": 5,
+    "input_fg": -1, "input_bg": -1, "separator_fg": 8, "separator_bg": -1
+  },
+  "nord": {
+    "user_fg": 6, "user_bg": -1, "assistant_fg": 7, "assistant_bg": -1,
+    "system_fg": 4, "system_bg": -1, "tool_fg": 5, "tool_bg": -1,
+    "error_fg": 1, "error_bg": -1, "status_fg": 7, "status_bg": 4,
+    "input_fg": 6, "input_bg": -1, "separator_fg": 8, "separator_bg": -1
+  },
+  "ayu": {
+    "user_fg": 3, "user_bg": -1, "assistant_fg": 2, "assistant_bg": -1,
+    "system_fg": 6, "system_bg": -1, "tool_fg": 5, "tool_bg": -1,
+    "error_fg": 1, "error_bg": -1, "status_fg": 0, "status_bg": 6,
+    "input_fg": -1, "input_bg": -1, "separator_fg": 8, "separator_bg": -1
+  },
+  "one-dark": {
+    "user_fg": 6, "user_bg": -1, "assistant_fg": 2, "assistant_bg": -1,
+    "system_fg": 4, "system_bg": -1, "tool_fg": 5, "tool_bg": -1,
+    "error_fg": 1, "error_bg": -1, "status_fg": 7, "status_bg": 4,
+    "input_fg": 6, "input_bg": -1, "separator_fg": 8, "separator_bg": -1
+  },
+  "solarized-dark": {
+    "user_fg": 3, "user_bg": -1, "assistant_fg": 6, "assistant_bg": -1,
+    "system_fg": 4, "system_bg": -1, "tool_fg": 5, "tool_bg": -1,
+    "error_fg": 1, "error_bg": -1, "status_fg": 0, "status_bg": 3,
+    "input_fg": -1, "input_bg": -1, "separator_fg": 8, "separator_bg": -1
+  },
+  "everforest": {
+    "user_fg": 3, "user_bg": -1, "assistant_fg": 2, "assistant_bg": -1,
+    "system_fg": 6, "system_bg": -1, "tool_fg": 5, "tool_bg": -1,
+    "error_fg": 1, "error_bg": -1, "status_fg": 7, "status_bg": 2,
+    "input_fg": -1, "input_bg": -1, "separator_fg": 8, "separator_bg": -1
+  },
+  "tomorrow-night": {
+    "user_fg": 3, "user_bg": -1, "assistant_fg": 7, "assistant_bg": -1,
+    "system_fg": 4, "system_bg": -1, "tool_fg": 5, "tool_bg": -1,
+    "error_fg": 1, "error_bg": -1, "status_fg": 0, "status_bg": 7,
+    "input_fg": -1, "input_bg": -1, "separator_fg": 8, "separator_bg": -1
+  },
+  "oceanic-next": {
+    "user_fg": 3, "user_bg": -1, "assistant_fg": 2, "assistant_bg": -1,
+    "system_fg": 6, "system_bg": -1, "tool_fg": 5, "tool_bg": -1,
+    "error_fg": 1, "error_bg": -1, "status_fg": 7, "status_bg": 4,
+    "input_fg": 2, "input_bg": -1, "separator_fg": 8, "separator_bg": -1
+  },
+  "palenight": {
+    "user_fg": 5, "user_bg": -1, "assistant_fg": 6, "assistant_bg": -1,
+    "system_fg": 4, "system_bg": -1, "tool_fg": 2, "tool_bg": -1,
+    "error_fg": 1, "error_bg": -1, "status_fg": 7, "status_bg": 5,
+    "input_fg": -1, "input_bg": -1, "separator_fg": 8, "separator_bg": -1
+  },
+  "material": {
+    "user_fg": 3, "user_bg": -1, "assistant_fg": 6, "assistant_bg": -1,
+    "system_fg": 4, "system_bg": -1, "tool_fg": 2, "tool_bg": -1,
+    "error_fg": 1, "error_bg": -1, "status_fg": 0, "status_bg": 6,
+    "input_fg": -1, "input_bg": -1, "separator_fg": 8, "separator_bg": -1
+  },
+  "github-dark": {
+    "user_fg": 7, "user_bg": -1, "assistant_fg": 6, "assistant_bg": -1,
+    "system_fg": 4, "system_bg": -1, "tool_fg": 2, "tool_bg": -1,
+    "error_fg": 1, "error_bg": -1, "status_fg": 7, "status_bg": 4,
+    "input_fg": -1, "input_bg": -1, "separator_fg": 8, "separator_bg": -1
+  },
+  "cyberpunk": {
+    "user_fg": 6, "user_bg": -1, "assistant_fg": 2, "assistant_bg": -1,
+    "system_fg": 5, "system_bg": -1, "tool_fg": 3, "tool_bg": -1,
+    "error_fg": 1, "error_bg": -1, "status_fg": 0, "status_bg": 5,
+    "input_fg": -1, "input_bg": -1, "separator_fg": 8, "separator_bg": -1
+  },
+  "neon": {
+    "user_fg": 5, "user_bg": -1, "assistant_fg": 2, "assistant_bg": -1,
+    "system_fg": 6, "system_bg": -1, "tool_fg": 3, "tool_bg": -1,
+    "error_fg": 1, "error_bg": -1, "status_fg": 0, "status_bg": 2,
+    "input_fg": -1, "input_bg": -1, "separator_fg": 8, "separator_bg": -1
+  },
+  "synthwave": {
+    "user_fg": 5, "user_bg": -1, "assistant_fg": 6, "assistant_bg": -1,
+    "system_fg": 3, "system_bg": -1, "tool_fg": 2, "tool_bg": -1,
+    "error_fg": 1, "error_bg": -1, "status_fg": 7, "status_bg": 5,
+    "input_fg": -1, "input_bg": -1, "separator_fg": 8, "separator_bg": -1
+  },
+  "outrun": {
+    "user_fg": 3, "user_bg": -1, "assistant_fg": 5, "assistant_bg": -1,
+    "system_fg": 6, "system_bg": -1, "tool_fg": 2, "tool_bg": -1,
+    "error_fg": 1, "error_bg": -1, "status_fg": 0, "status_bg": 5,
+    "input_fg": -1, "input_bg": -1, "separator_fg": 8, "separator_bg": -1
+  },
+  "forest": {
+    "user_fg": 3, "user_bg": -1, "assistant_fg": 2, "assistant_bg": -1,
+    "system_fg": 4, "system_bg": -1, "tool_fg": 6, "tool_bg": -1,
+    "error_fg": 1, "error_bg": -1, "status_fg": 7, "status_bg": 2,
+    "input_fg": -1, "input_bg": -1, "separator_fg": 8, "separator_bg": -1
+  },
+  "arctic": {
+    "user_fg": 7, "user_bg": -1, "assistant_fg": 6, "assistant_bg": -1,
+    "system_fg": 4, "system_bg": -1, "tool_fg": 5, "tool_bg": -1,
+    "error_fg": 1, "error_bg": -1, "status_fg": 0, "status_bg": 6,
+    "input_fg": -1, "input_bg": -1, "separator_fg": 8, "separator_bg": -1
+  },
+  "desert": {
+    "user_fg": 3, "user_bg": -1, "assistant_fg": 7, "assistant_bg": -1,
+    "system_fg": 6, "system_bg": -1, "tool_fg": 5, "tool_bg": -1,
+    "error_fg": 1, "error_bg": -1, "status_fg": 3, "status_bg": 4,
+    "input_fg": -1, "input_bg": -1, "separator_fg": 8, "separator_bg": -1
+  },
+  "mocha": {
+    "user_fg": 3, "user_bg": -1, "assistant_fg": 2, "assistant_bg": -1,
+    "system_fg": 6, "system_bg": -1, "tool_fg": 5, "tool_bg": -1,
+    "error_fg": 1, "error_bg": -1, "status_fg": 7, "status_bg": 5,
+    "input_fg": -1, "input_bg": -1, "separator_fg": 8, "separator_bg": -1
+  },
+  "latte": {
+    "user_fg": 0, "user_bg": -1, "assistant_fg": 4, "assistant_bg": -1,
+    "system_fg": 5, "system_bg": -1, "tool_fg": 1, "tool_bg": -1,
+    "error_fg": 1, "error_bg": -1, "status_fg": 0, "status_bg": 3,
+    "input_fg": 0, "input_bg": -1, "separator_fg": 7, "separator_bg": -1
+  },
+  "frappe": {
+    "user_fg": 7, "user_bg": -1, "assistant_fg": 2, "assistant_bg": -1,
+    "system_fg": 6, "system_bg": -1, "tool_fg": 5, "tool_bg": -1,
+    "error_fg": 1, "error_bg": -1, "status_fg": 0, "status_bg": 7,
+    "input_fg": -1, "input_bg": -1, "separator_fg": 8, "separator_bg": -1
+  },
+  "macchiato": {
+    "user_fg": 7, "user_bg": -1, "assistant_fg": 5, "assistant_bg": -1,
+    "system_fg": 6, "system_bg": -1, "tool_fg": 2, "tool_bg": -1,
+    "error_fg": 1, "error_bg": -1, "status_fg": 7, "status_bg": 4,
+    "input_fg": -1, "input_bg": -1, "separator_fg": 8, "separator_bg": -1
+  },
+  "aurora": {
+    "user_fg": 6, "user_bg": -1, "assistant_fg": 2, "assistant_bg": -1,
+    "system_fg": 5, "system_bg": -1, "tool_fg": 3, "tool_bg": -1,
+    "error_fg": 1, "error_bg": -1, "status_fg": 7, "status_bg": 5,
+    "input_fg": -1, "input_bg": -1, "separator_fg": 8, "separator_bg": -1
+  },
+  "rose-pine": {
+    "user_fg": 3, "user_bg": -1, "assistant_fg": 5, "assistant_bg": -1,
+    "system_fg": 6, "system_bg": -1, "tool_fg": 2, "tool_bg": -1,
+    "error_fg": 1, "error_bg": -1, "status_fg": 7, "status_bg": 5,
+    "input_fg": 7, "input_bg": -1, "separator_fg": 8, "separator_bg": -1
+  },
+  "blood": {
+    "user_fg": 7, "user_bg": -1, "assistant_fg": 1, "assistant_bg": -1,
+    "system_fg": 3, "system_bg": -1, "tool_fg": 5, "tool_bg": -1,
+    "error_fg": 1, "error_bg": -1, "status_fg": 7, "status_bg": 1,
+    "input_fg": -1, "input_bg": -1, "separator_fg": 8, "separator_bg": -1
+  },
+  "ocean": {
+    "user_fg": 7, "user_bg": -1, "assistant_fg": 6, "assistant_bg": -1,
+    "system_fg": 4, "system_bg": -1, "tool_fg": 2, "tool_bg": -1,
+    "error_fg": 1, "error_bg": -1, "status_fg": 7, "status_bg": 4,
+    "input_fg": -1, "input_bg": -1, "separator_fg": 8, "separator_bg": -1
+  },
+  "midnight": {
+    "user_fg": 6, "user_bg": -1, "assistant_fg": 7, "assistant_bg": -1,
+    "system_fg": 5, "system_bg": -1, "tool_fg": 3, "tool_bg": -1,
+    "error_fg": 1, "error_bg": -1, "status_fg": 7, "status_bg": 4,
+    "input_fg": 6, "input_bg": -1, "separator_fg": 8, "separator_bg": -1
+  },
+  "hacker": {
+    "user_fg": 2, "user_bg": -1, "assistant_fg": 7, "assistant_bg": -1,
+    "system_fg": 3, "system_bg": -1, "tool_fg": 6, "tool_bg": -1,
+    "error_fg": 1, "error_bg": -1, "status_fg": 2, "status_bg": 0,
+    "input_fg": -1, "input_bg": -1, "separator_fg": 2, "separator_bg": -1
+  },
+  "sunset": {
+    "user_fg": 3, "user_bg": -1, "assistant_fg": 1, "assistant_bg": -1,
+    "system_fg": 5, "system_bg": -1, "tool_fg": 3, "tool_bg": -1,
+    "error_fg": 1, "error_bg": -1, "status_fg": 3, "status_bg": 4,
+    "input_fg": -1, "input_bg": -1, "separator_fg": 8, "separator_bg": -1
+  },
+  "iceberg": {
+    "user_fg": 6, "user_bg": -1, "assistant_fg": 7, "assistant_bg": -1,
+    "system_fg": 4, "system_bg": -1, "tool_fg": 5, "tool_bg": -1,
+    "error_fg": 1, "error_bg": -1, "status_fg": 0, "status_bg": 6,
+    "input_fg": -1, "input_bg": -1, "separator_fg": 8, "separator_bg": -1
+  }
+}

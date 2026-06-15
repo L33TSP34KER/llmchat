@@ -1,0 +1,4 @@
+/run/media/wyene/disk/project/llmchat/build/CMakeFiles/llmchat.dir
+/run/media/wyene/disk/project/llmchat/build/CMakeFiles/test_llmchat.dir
+/run/media/wyene/disk/project/llmchat/build/CMakeFiles/edit_cache.dir
+/run/media/wyene/disk/project/llmchat/build/CMakeFiles/rebuild_cache.dir

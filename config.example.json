@@ -1,0 +1,156 @@
+{
+  "api_endpoint": "http://localhost:8080/v1/chat/completions",
+  "api_key": "",
+  "model": "llama3.2",
+  "system_prompt": "You are a proactive decision-making assistant. Take initiative — don't wait for perfect instructions. When the user gives incomplete context or ambiguous requests, use your available tools to figure out what's needed. Search files, check the system, explore the codebase, or look things up rather than asking for clarification. You have memory tools (save_memory, get_memory, list_memories, delete_memory) — use them to retain critical information (usernames, passwords, project paths, preferences, decisions) between sessions. Before acting on topics that seem recurring, check your memory first. Save anything you're told to remember, and anything obviously important for future sessions. Be decisive, solve problems end-to-end, and only ask for help when tools can't possibly provide the answer.",
+  "include_tools_in_context": true,
+  "current_skill": "",
+  "theme": "casino",
+  "slot_machine_animation": true,
+  "animation_speed": 40,
+  "casino_status_bar": true,
+  "tools": [
+    {
+      "name": "get_weather",
+      "description": "Get current weather for a city",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "location": {
+            "type": "string",
+            "description": "City name or location"
+          }
+        },
+        "required": ["location"]
+      },
+      "command": "curl -s 'wttr.in/{location}?format=%C+%t+%w'"
+    },
+    {
+      "name": "calculate",
+      "description": "Evaluate a mathematical expression",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "expression": {
+            "type": "string",
+            "description": "Mathematical expression to evaluate"
+          }
+        },
+        "required": ["expression"]
+      },
+      "command": "python3 -c \"print(eval('{expression}'))\""
+    },
+    {
+      "name": "read_file",
+      "description": "Read the contents of a file",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Path to the file"
+          }
+        },
+        "required": ["path"]
+      },
+      "command": "cat {path}"
+    },
+    {
+      "name": "list_files",
+      "description": "List files in a directory",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "directory": {
+            "type": "string",
+            "description": "Directory path to list"
+          }
+        },
+        "required": ["directory"]
+      },
+      "command": "ls -la {directory}"
+    },
+    {
+      "name": "save_memory",
+      "description": "Save a key-value pair to long-term persistent memory (survives across sessions). Use for critical info: passwords, paths, preferences, decisions, user details.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "key": {"type": "string", "description": "Memory key (short, descriptive)"},
+          "value": {"type": "string", "description": "Value to store"}
+        },
+        "required": ["key", "value"]
+      },
+      "command": ""
+    },
+    {
+      "name": "get_memory",
+      "description": "Retrieve a value from long-term memory by key.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "key": {"type": "string", "description": "Memory key to look up"}
+        },
+        "required": ["key"]
+      },
+      "command": ""
+    },
+    {
+      "name": "list_memories",
+      "description": "List all stored memory entries with their values.",
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      },
+      "command": ""
+    },
+    {
+      "name": "delete_memory",
+      "description": "Delete a specific memory entry by key.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "key": {"type": "string", "description": "Memory key to delete"}
+        },
+        "required": ["key"]
+      },
+      "command": ""
+    },
+    {
+      "name": "terminal",
+      "description": "Run a command in a persistent bash shell. State (current directory, environment variables) persists across calls.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string",
+            "description": "Shell command to execute"
+          }
+        },
+        "required": ["command"]
+      },
+      "command": ""
+    }
+  ],
+  "mcp_servers": [
+    {
+      "name": "example-mcp-server",
+      "command": "/path/to/mcp-server",
+      "args": ["--flag", "value"]
+    }
+  ],
+  "skills": [
+    {
+      "name": "coding",
+      "system_prompt": "You are an expert programming assistant. Write clean, well-documented code. Explain your reasoning."
+    },
+    {
+      "name": "helpful",
+      "system_prompt": "You are a helpful, friendly assistant. Be concise and clear in your responses."
+    },
+    {
+      "name": "creative",
+      "system_prompt": "You are a creative writing assistant. Be imaginative and descriptive. Write with flair."
+    }
+  ]
+}
