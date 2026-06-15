@@ -93,6 +93,27 @@ Theme Theme::get(const std::string& name) {
     return t;
 }
 
+static void write_sample_config(const std::string& path) {
+    json j;
+    j["api_endpoint"] = "http://localhost:8080/v1/chat/completions";
+    j["api_key"] = "";
+    j["model"] = "llama3.2";
+    j["system_prompt"] = "You are a helpful assistant.";
+    j["theme"] = "default";
+    j["current_skill"] = "";
+    j["include_tools_in_context"] = true;
+    j["slot_machine_animation"] = false;
+    j["animation_speed"] = 50;
+    j["casino_status_bar"] = false;
+    j["context_compression"] = false;
+    j["max_context_chars"] = 80000;
+    j["tools"] = json::array();
+    j["mcp_servers"] = json::array();
+    j["skills"] = json::array();
+    std::ofstream f(path);
+    if (f.is_open()) f << j.dump(2) << std::endl;
+}
+
 Config Config::load() {
     Config cfg;
     std::string dir = get_config_dir();
@@ -101,7 +122,8 @@ Config Config::load() {
     std::ifstream f(path);
     if (!f.is_open()) {
         mkdir(dir.c_str(), 0755);
-        cfg.save();
+        write_sample_config(path);
+        cfg.last_error = "Created sample config at " + path;
         return cfg;
     }
 
@@ -110,13 +132,19 @@ Config Config::load() {
     f.seekg(0, std::ios::beg);
 
     if (empty) {
-        cfg.save();
+        write_sample_config(path);
+        cfg.last_error = "Config was empty, wrote sample";
         return cfg;
     }
 
     try {
         json j;
         f >> j;
+
+        if (!j.is_object()) {
+            cfg.last_error = "Config is not a JSON object — check the file";
+            return cfg;
+        }
 
         if (j.contains("api_endpoint")) cfg.api_endpoint = j["api_endpoint"];
         if (j.contains("api_key")) cfg.api_key = j["api_key"];
@@ -161,7 +189,8 @@ Config Config::load() {
             }
         }
     } catch (std::exception& e) {
-        std::cerr << "Config load error: " << e.what() << std::endl;
+        std::string msg = e.what();
+        cfg.last_error = "Config parse error: " + msg + " — check " + path;
     }
     return cfg;
 }

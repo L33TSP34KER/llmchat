@@ -397,16 +397,17 @@ void ChatUI::send_message() {
             cursor_pos_ = 0;
             return;
         }
-        if (cmd.substr(0, 11) == "deepsearch ") {
-            std::string query = cmd.substr(11);
-            query.erase(0, query.find_first_not_of(" \t"));
-            query.erase(query.find_last_not_of(" \t") + 1);
-            if (query.empty()) {
+        if (cmd == "deepsearch" || cmd.substr(0, 11) == "deepsearch ") {
+            std::string query;
+            if (cmd == "deepsearch") {
                 state_.status_text = "Usage: /deepsearch <query>";
                 input_buf_.clear();
                 cursor_pos_ = 0;
                 return;
             }
+            query = cmd.substr(11);
+            query.erase(0, query.find_first_not_of(" \t"));
+            query.erase(query.find_last_not_of(" \t") + 1);
             ConversationEntry ue;
             ue.type = ConversationEntry::USER;
             ue.content = "/deepsearch " + query;

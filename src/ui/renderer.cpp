@@ -347,23 +347,74 @@ static std::vector<SegLine> build_seg_lines(Conversation* conv, int max_x,
                 continue;
             }
 
-            // Code block
+            // Code block with syntax highlighting
             if (md_line.is_code_block) {
-                auto code_lines = wrap_text(md_line.segs[0].text, content_w);
-                if (code_lines.empty()) code_lines = {" "};
-                // Header fence
+                // Header fence with language label
                 {
                     SegLine sl;
                     std::string fence = " ";
                     for (int i = 0; i < content_w; i++) fence += "\xe2\x94\x80";
                     sl.segs.push_back({4, A_BOLD, fence});
+                    if (!md_line.code_lang.empty()) {
+                        std::string lang_tag = " " + md_line.code_lang + " ";
+                        sl.segs.push_back({6, A_BOLD, lang_tag});
+                    }
                     add_line(sl);
                 }
-                for (size_t ci = 0; ci < code_lines.size(); ci++) {
-                    SegLine sl;
-                    sl.segs.push_back({4, A_NORMAL, " \xe2\x96\x8c " + code_lines[ci]});
-                    add_line(sl);
+                // Syntax-highlighted code
+                auto hl_segs = md_syntax_highlight(md_line.segs[0].text, md_line.code_lang);
+                // Build an intermediate representation: lines of colored segments
+                struct CodeSeg { int color; int attr; std::string text; };
+                std::vector<std::vector<CodeSeg>> code_out_lines;
+                auto flush_code_out = [&]() {
+                    if (!code_out_lines.empty()) {
+                        for (auto& out_line : code_out_lines) {
+                            SegLine sl;
+                            sl.segs.push_back({4, A_NORMAL, " \xe2\x96\x8c "});
+                            for (auto& cs : out_line) {
+                                RenderSeg rs;
+                                rs.color = cs.color;
+                                rs.attr = cs.attr;
+                                rs.text = cs.text;
+                                sl.segs.push_back(rs);
+                            }
+                            add_line(sl);
+                        }
+                        code_out_lines.clear();
+                    }
+                };
+                // For each highlighted segment, split by newline
+                for (auto& seg : hl_segs) {
+                    int syntax_color = 4;
+                    int syntax_attr = A_NORMAL;
+                    switch (seg.type) {
+                        case MdSeg::SYNTAX_KEYWORD: syntax_color = 9; syntax_attr = A_BOLD; break;
+                        case MdSeg::SYNTAX_STRING:  syntax_color = 3; break;
+                        case MdSeg::SYNTAX_COMMENT: syntax_color = 7; syntax_attr = A_DIM; break;
+                        case MdSeg::SYNTAX_NUMBER:  syntax_color = 9; break;
+                        case MdSeg::SYNTAX_BUILTIN: syntax_color = 4; syntax_attr = A_BOLD; break;
+                        case MdSeg::SYNTAX_PREPROC: syntax_color = 4; syntax_attr = A_BOLD; break;
+                        default: break;
+                    }
+                    std::string text = seg.text;
+                    size_t start = 0;
+                    while (start < text.size()) {
+                        size_t nl = text.find('\n', start);
+                        std::string piece = (nl == std::string::npos) ? text.substr(start) : text.substr(start, nl - start);
+                        if (piece.empty() && nl != std::string::npos) {
+                            // Emtpy line
+                            flush_code_out();
+                            code_out_lines.push_back({}); // empty line
+                            flush_code_out();
+                        } else if (!piece.empty()) {
+                            if (code_out_lines.empty()) code_out_lines.push_back({});
+                            code_out_lines.back().push_back({syntax_color, syntax_attr, piece});
+                        }
+                        if (nl == std::string::npos) break;
+                        start = nl + 1;
+                    }
                 }
+                flush_code_out();
                 // Footer fence
                 {
                     SegLine sl;

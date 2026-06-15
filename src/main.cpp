@@ -90,6 +90,15 @@ int main(int argc, char* argv[]) {
     }
 
     Conversation conv;
+    // Show config error as system message if any
+    if (!config.last_error.empty()) {
+        ConversationEntry ce;
+        ce.type = ConversationEntry::SYSTEM;
+        ce.content = config.last_error;
+        ce.timestamp = std::time(nullptr);
+        conv.add_entry(ce);
+    }
+
     LlmClient llm(&config);
     ChatUI ui(&conv, &config);
 
@@ -104,20 +113,25 @@ int main(int argc, char* argv[]) {
     int streak_days = 0;
     std::string last_date;
     {
-        json stats_json;
+        json stats_json = json::object();
         std::ifstream sf(stats_file);
         if (sf.good()) {
-            try { sf >> stats_json; } catch (...) {}
+            try {
+                json tmp;
+                sf >> tmp;
+                if (tmp.is_object()) stats_json = tmp;
+            } catch (...) {}
         }
-        last_date = stats_json.value("last_date", "");
-        streak_days = stats_json.value("streak", 0);
+        if (stats_json.is_object()) {
+            last_date = stats_json.value("last_date", "");
+            streak_days = stats_json.value("streak", 0);
+        }
         char today_buf[16];
         auto now_t = std::time(nullptr);
         std::strftime(today_buf, sizeof(today_buf), "%Y-%m-%d", std::localtime(&now_t));
         std::string today(today_buf);
         if (today != last_date) {
             if (!last_date.empty()) {
-                // Check if yesterday
                 char yest_buf[16];
                 auto yest_t = now_t - 86400;
                 std::strftime(yest_buf, sizeof(yest_buf), "%Y-%m-%d", std::localtime(&yest_t));
@@ -130,10 +144,12 @@ int main(int argc, char* argv[]) {
             } else {
                 streak_days = 1;
             }
-            stats_json["streak"] = streak_days;
-            stats_json["last_date"] = today;
-            std::ofstream sf_out(stats_file);
-            if (sf_out.good()) sf_out << stats_json.dump(2);
+            if (stats_json.is_object()) {
+                stats_json["streak"] = streak_days;
+                stats_json["last_date"] = today;
+                std::ofstream sf_out(stats_file);
+                if (sf_out.good()) sf_out << stats_json.dump(2);
+            }
         }
     }
 
@@ -409,6 +425,13 @@ int main(int argc, char* argv[]) {
                     conv.add_entry(me);
                 }
                 ui.notify_update();
+                uistate.processing = false;
+                ui.set_state(uistate);
+                return;
+            }
+
+            if (cmd == "deepsearch") {
+                uistate.status_text = "Use: /deepsearch <query>";
                 uistate.processing = false;
                 ui.set_state(uistate);
                 return;

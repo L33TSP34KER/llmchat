@@ -109,6 +109,7 @@ struct Config {
 
     static Config load();
     void save();
+    std::string last_error;
 
     json get_tools_json() {
         json arr = json::array();

@@ -3,7 +3,8 @@
 #include <vector>
 
 struct MdSeg {
-    enum Type { NORMAL, BOLD, ITALIC, STRIKETHROUGH, CODE, HEADING, LINK, TABLE_ROW, TABLE_SEP, BLOCKQUOTE, HR, LIST_ITEM, TASK_DONE, TASK_PENDING, MATH, DISPLAY_MATH };
+    enum Type { NORMAL, BOLD, ITALIC, STRIKETHROUGH, CODE, HEADING, LINK, TABLE_ROW, TABLE_SEP, BLOCKQUOTE, HR, LIST_ITEM, TASK_DONE, TASK_PENDING, MATH, DISPLAY_MATH,
+                SYNTAX_KEYWORD, SYNTAX_STRING, SYNTAX_COMMENT, SYNTAX_NUMBER, SYNTAX_BUILTIN, SYNTAX_OPERATOR, SYNTAX_PREPROC };
     Type type;
     std::string text;
     int level = 0;
@@ -14,8 +15,12 @@ struct MdLine {
     bool is_table = false;
     bool is_code_block = false;
     bool is_blockquote = false;
+    std::string code_lang;
 };
 
 std::vector<MdSeg> md_parse_inline(const std::string& line);
 std::vector<MdLine> md_parse(const std::string& text, int width);
 std::string md_latex_to_unicode(const std::string& latex);
+
+// Syntax highlighting: tokenize code string into colored segments
+std::vector<MdSeg> md_syntax_highlight(const std::string& code, const std::string& lang);

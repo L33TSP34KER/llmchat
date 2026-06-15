@@ -559,6 +559,7 @@ std::vector<MdLine> md_parse(const std::string& text, int width) {
     std::string raw_line;
     bool in_code_block = false;
     std::string code_buf;
+    std::string current_code_lang_;
 
     while (std::getline(stream, raw_line)) {
         if (!raw_line.empty() && raw_line.back() == '\r')
@@ -571,11 +572,17 @@ std::vector<MdLine> md_parse(const std::string& text, int width) {
             if (!in_code_block) {
                 in_code_block = true;
                 code_buf.clear();
+                // Capture language (rest of line after ```)
+                std::string lang = raw_line.substr(3);
+                lang.erase(0, lang.find_first_not_of(" \t"));
+                lang.erase(lang.find_last_not_of(" \t") + 1);
+                current_code_lang_ = lang;
                 continue;
             } else {
                 in_code_block = false;
                 MdLine ml;
                 ml.is_code_block = true;
+                ml.code_lang = current_code_lang_;
                 ml.segs.push_back({MdSeg::CODE, code_buf, 0});
                 out.push_back(ml);
                 continue;
@@ -753,8 +760,252 @@ std::vector<MdLine> md_parse(const std::string& text, int width) {
     }
 
     if (in_code_block) {
-        { MdLine ml; ml.segs.push_back({MdSeg::CODE, code_buf, 0}); out.push_back(ml); }
+        MdLine ml;
+        ml.is_code_block = true;
+        ml.code_lang = current_code_lang_;
+        ml.segs.push_back({MdSeg::CODE, code_buf, 0});
+        out.push_back(ml);
     }
 
     return out;
+}
+
+// -------------------------------------------------------------------
+// Syntax highlighting for code blocks
+// -------------------------------------------------------------------
+
+static bool is_word_char(char c) {
+    return std::isalnum((unsigned char)c) || c == '_';
+}
+
+static bool is_syntax_keyword(const std::string& word, const std::string& lang) {
+    static const std::unordered_map<std::string, std::vector<std::string>> keywords = {
+        {"c", {"auto","break","case","char","const","continue","default","do","double",
+               "else","enum","extern","float","for","goto","if","int","long","register",
+               "return","short","signed","sizeof","static","struct","switch","typedef",
+               "union","unsigned","void","volatile","while","include","define","ifdef",
+               "endif","pragma","NULL","bool","true","false","nullptr"}},
+        {"cpp", {"alignas","alignof","auto","bool","break","case","catch","char","class",
+                 "const","constexpr","continue","decltype","default","delete","do","double",
+                 "else","enum","explicit","export","extern","false","float","for","friend",
+                 "goto","if","include","inline","int","long","mutable","namespace","new",
+                 "noexcept","nullptr","operator","override","private","protected","public",
+                 "register","return","short","signed","sizeof","static","static_cast",
+                 "struct","switch","template","this","throw","true","try","typedef","typeid",
+                 "typename","union","unsigned","using","virtual","void","volatile","while",
+                 "define","ifdef","endif","pragma","include","NULL","std","string","vector",
+                 "map","set","unordered_map","shared_ptr","unique_ptr","make_shared",
+                 "make_unique","cout","cin","endl"}},
+        {"python", {"False","None","True","and","as","assert","async","await","break","class",
+                    "continue","def","del","elif","else","except","finally","for","from",
+                    "global","if","import","in","is","lambda","nonlocal","not","or","pass",
+                    "raise","return","try","while","with","yield","print","range","len",
+                    "self","super","open","int","str","float","list","dict","set","tuple",
+                    "type","isinstance","enumerate","zip","map","filter","sorted","reversed"}},
+        {"javascript", {"async","await","break","case","catch","class","const","continue",
+                        "debugger","default","delete","do","else","export","extends","false",
+                        "finally","for","function","if","import","in","instanceof","let",
+                        "new","null","of","return","super","switch","this","throw","true",
+                        "try","typeof","var","void","while","with","yield","console","log",
+                        "require","module","exports","undefined","NaN","Array","Object",
+                        "String","Number","Promise","Map","Set"}},
+        {"typescript", {"async","await","break","case","catch","class","const","continue",
+                        "debugger","default","delete","do","else","enum","export","extends",
+                        "false","finally","for","function","if","import","in","instanceof",
+                        "interface","let","new","null","of","return","super","switch","this",
+                        "throw","true","try","type","typeof","var","void","while","with",
+                        "yield","console","log","require","module","exports","undefined",
+                        "NaN","Array","Object","String","Number","Promise","Map","Set",
+                        "any","never","unknown","string","number","boolean","void"}},
+        {"rust", {"as","async","await","break","const","continue","crate","dyn","else","enum",
+                  "extern","false","fn","for","if","impl","in","let","loop","match","mod",
+                  "move","mut","pub","ref","return","self","Self","static","struct","super",
+                  "trait","true","type","unsafe","use","where","while","Some","None","Ok",
+                  "Err","String","Vec","HashMap","Box","Arc","Mutex"}},
+        {"go", {"break","case","chan","const","continue","default","defer","else","fallthrough",
+                "for","func","go","goto","if","import","interface","map","package","range",
+                "return","select","struct","switch","type","var","true","false","nil",
+                "string","int","bool","float64","error","byte","rune","uint","int64",
+                "make","len","cap","append","delete","close"}},
+        {"java", {"abstract","assert","boolean","break","byte","case","catch","char","class",
+                  "const","continue","default","do","double","else","enum","extends","false",
+                  "final","finally","float","for","goto","if","implements","import","instanceof",
+                  "int","interface","long","native","new","null","package","private","protected",
+                  "public","return","short","static","strictfp","super","switch","synchronized",
+                  "this","throw","throws","transient","true","try","void","volatile","while",
+                  "String","System","out","println","print","Integer","ArrayList","HashMap",
+                  "List","Map","Set","Object"}},
+        {"bash", {"if","then","else","elif","fi","for","while","do","done","case","esac",
+                  "function","in","return","exit","break","continue","select","until","time",
+                  "[[","]]","echo","export","local","source","unset","set","shift","trap",
+                  "declare","typeset","read","printf","test","let","eval","exec"}},
+    };
+    auto it = keywords.find(lang);
+    if (it == keywords.end()) return false;
+    for (auto& kw : it->second) if (word == kw) return true;
+    return false;
+}
+
+static bool is_syntax_builtin(const std::string& word, const std::string& lang) {
+    static const std::unordered_map<std::string, std::vector<std::string>> builtins = {
+        {"python", {"__init__","__str__","__repr__","__len__","__call__","__getitem__",
+                    "__setitem__","__enter__","__exit__","__add__","__sub__","__mul__"}},
+        {"javascript", {"window","document","setTimeout","setInterval","fetch","localStorage",
+                        "sessionStorage","JSON","Math","Date","RegExp","Error","console"}},
+    };
+    auto it = builtins.find(lang);
+    if (it == builtins.end()) return false;
+    for (auto& b : it->second) if (word == b) return true;
+    return false;
+}
+
+std::vector<MdSeg> md_syntax_highlight(const std::string& code, const std::string& lang) {
+    std::vector<MdSeg> segs;
+    std::string lower_lang;
+    for (char c : lang) lower_lang += (char)std::tolower((unsigned char)c);
+
+    size_t i = 0;
+    while (i < code.size()) {
+        // Line comments
+        if ((lower_lang == "c" || lower_lang == "cpp" || lower_lang == "java" ||
+             lower_lang == "javascript" || lower_lang == "typescript" || lower_lang == "go" ||
+             lower_lang == "rust") &&
+            i + 1 < code.size() && code[i] == '/' && code[i+1] == '/') {
+            size_t end = code.find('\n', i);
+            if (end == std::string::npos) end = code.size();
+            segs.push_back({MdSeg::SYNTAX_COMMENT, code.substr(i, end - i), 0});
+            i = end;
+            continue;
+        }
+        // Block comments /* */
+        if ((lower_lang == "c" || lower_lang == "cpp" || lower_lang == "java" ||
+             lower_lang == "javascript" || lower_lang == "typescript" || lower_lang == "go" ||
+             lower_lang == "rust") &&
+            i + 1 < code.size() && code[i] == '/' && code[i+1] == '*') {
+            size_t end = code.find("*/", i + 2);
+            if (end == std::string::npos) end = code.size();
+            else end += 2;
+            segs.push_back({MdSeg::SYNTAX_COMMENT, code.substr(i, end - i), 0});
+            i = end;
+            continue;
+        }
+        // Python/Ruby/Bash comments #
+        if ((lower_lang == "python" || lower_lang == "ruby" || lower_lang == "bash" ||
+             lower_lang == "yaml" || lower_lang == "r" || lower_lang == "perl") &&
+            code[i] == '#') {
+            size_t end = code.find('\n', i);
+            if (end == std::string::npos) end = code.size();
+            segs.push_back({MdSeg::SYNTAX_COMMENT, code.substr(i, end - i), 0});
+            i = end;
+            continue;
+        }
+        // Strings (double quoted)
+        if (code[i] == '"') {
+            size_t end = i + 1;
+            while (end < code.size()) {
+                if (code[end] == '\\') { end += 2; continue; }
+                if (code[end] == '"') { end++; break; }
+                end++;
+            }
+            segs.push_back({MdSeg::SYNTAX_STRING, code.substr(i, end - i), 0});
+            i = end;
+            continue;
+        }
+        // Strings (single quoted)
+        if (code[i] == '\'') {
+            size_t end = i + 1;
+            while (end < code.size()) {
+                if (code[end] == '\\') { end += 2; continue; }
+                if (code[end] == '\'') { end++; break; }
+                end++;
+            }
+            segs.push_back({MdSeg::SYNTAX_STRING, code.substr(i, end - i), 0});
+            i = end;
+            continue;
+        }
+        // Template literals (backtick) - JS/TS
+        if (code[i] == '`' &&
+            (lower_lang == "javascript" || lower_lang == "typescript")) {
+            size_t end = i + 1;
+            while (end < code.size()) {
+                if (code[end] == '\\') { end += 2; continue; }
+                if (code[end] == '`') { end++; break; }
+                end++;
+            }
+            segs.push_back({MdSeg::SYNTAX_STRING, code.substr(i, end - i), 0});
+            i = end;
+            continue;
+        }
+        // Preprocessor directives (#include, #define, etc.)
+        if ((lower_lang == "c" || lower_lang == "cpp") && code[i] == '#') {
+            size_t end = code.find('\n', i);
+            if (end == std::string::npos) end = code.size();
+            segs.push_back({MdSeg::SYNTAX_PREPROC, code.substr(i, end - i), 0});
+            i = end;
+            continue;
+        }
+        // Numbers
+        if (std::isdigit((unsigned char)code[i]) ||
+            (code[i] == '.' && i + 1 < code.size() && std::isdigit((unsigned char)code[i+1]))) {
+            size_t end = i;
+            if (code[end] == '0' && end + 1 < code.size() &&
+                (code[end+1] == 'x' || code[end+1] == 'X')) {
+                end += 2;
+                while (end < code.size() && std::isxdigit((unsigned char)code[end])) end++;
+            } else {
+                while (end < code.size() && (std::isdigit((unsigned char)code[end]) || code[end] == '.')) end++;
+                if (end < code.size() && (code[end] == 'f' || code[end] == 'F' ||
+                    code[end] == 'l' || code[end] == 'L' || code[end] == 'u' || code[end] == 'U')) end++;
+            }
+            segs.push_back({MdSeg::SYNTAX_NUMBER, code.substr(i, end - i), 0});
+            i = end;
+            continue;
+        }
+        // Words (potential keywords)
+        if (is_word_char(code[i])) {
+            size_t end = i;
+            while (end < code.size() && is_word_char(code[end])) end++;
+            std::string word = code.substr(i, end - i);
+            if (is_syntax_keyword(word, lower_lang)) {
+                segs.push_back({MdSeg::SYNTAX_KEYWORD, word, 0});
+            } else if (is_syntax_builtin(word, lower_lang)) {
+                segs.push_back({MdSeg::SYNTAX_BUILTIN, word, 0});
+            } else {
+                segs.push_back({MdSeg::NORMAL, word, 0});
+            }
+            i = end;
+            continue;
+        }
+        // Operators and punctuation
+        if (code[i] == '+' || code[i] == '-' || code[i] == '*' || code[i] == '/' ||
+            code[i] == '=' || code[i] == '<' || code[i] == '>' || code[i] == '!' ||
+            code[i] == '&' || code[i] == '|' || code[i] == '^' || code[i] == '~' ||
+            code[i] == '%' || code[i] == '?' || code[i] == ':' || code[i] == ';' ||
+            code[i] == ',' || code[i] == '.' || code[i] == '(' || code[i] == ')' ||
+            code[i] == '{' || code[i] == '}' || code[i] == '[' || code[i] == ']') {
+            segs.push_back({MdSeg::SYNTAX_OPERATOR, std::string(1, code[i]), 0});
+            i++;
+            continue;
+        }
+        // Everything else
+        {
+            size_t end = i + 1;
+            while (end < code.size() && !is_word_char(code[end]) &&
+                   code[end] != '"' && code[end] != '\'' && code[end] != '`' &&
+                   code[end] != '/' && code[end] != '#' &&
+                   !std::isdigit((unsigned char)code[end]) &&
+                   code[end] != '+' && code[end] != '-' && code[end] != '*' &&
+                   code[end] != '=' && code[end] != '<' && code[end] != '>' &&
+                   code[end] != '!' && code[end] != '&' && code[end] != '|' &&
+                   code[end] != '^' && code[end] != '~' && code[end] != '%' &&
+                   code[end] != '?' && code[end] != ':' && code[end] != ';' &&
+                   code[end] != ',' && code[end] != '.' &&
+                   code[end] != '(' && code[end] != ')' &&
+                   code[end] != '{' && code[end] != '}' &&
+                   code[end] != '[' && code[end] != ']') end++;
+            segs.push_back({MdSeg::NORMAL, code.substr(i, end - i), 0});
+            i = end;
+        }
+    }
+    return segs;
 }
