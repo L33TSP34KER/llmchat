@@ -93,6 +93,15 @@ Theme Theme::get(const std::string& name) {
     return t;
 }
 
+static json make_tool(const std::string& name, const std::string& desc, json schema) {
+    json t;
+    t["name"] = name;
+    t["description"] = desc;
+    t["input_schema"] = schema;
+    t["command"] = "";
+    return t;
+}
+
 static void write_sample_config(const std::string& path) {
     json j;
     j["api_endpoint"] = "http://localhost:8080/v1/chat/completions";
@@ -107,7 +116,58 @@ static void write_sample_config(const std::string& path) {
     j["casino_status_bar"] = false;
     j["context_compression"] = false;
     j["max_context_chars"] = 80000;
-    j["tools"] = json::array();
+
+    json tools_arr = json::array();
+
+    json terminal_schema;
+    terminal_schema["type"] = "object";
+    terminal_schema["properties"]["command"] = {{"type", "string"}, {"description", "Shell command to execute"}};
+    terminal_schema["required"] = json::array({"command"});
+    tools_arr.push_back(make_tool("terminal", "Execute a shell command", terminal_schema));
+
+    json mem_save_schema;
+    mem_save_schema["type"] = "object";
+    mem_save_schema["properties"]["key"] = {{"type", "string"}, {"description", "Memory key"}};
+    mem_save_schema["properties"]["value"] = {{"type", "string"}, {"description", "Value to store"}};
+    mem_save_schema["required"] = json::array({"key", "value"});
+    tools_arr.push_back(make_tool("save_memory", "Save a key-value pair to memory", mem_save_schema));
+
+    json mem_get_schema;
+    mem_get_schema["type"] = "object";
+    mem_get_schema["properties"]["key"] = {{"type", "string"}, {"description", "Memory key to retrieve"}};
+    mem_get_schema["required"] = json::array({"key"});
+    tools_arr.push_back(make_tool("get_memory", "Retrieve a value from memory by key", mem_get_schema));
+
+    tools_arr.push_back(make_tool("list_memories", "List all saved memories", {{"type", "object"}, {"properties", json::object()}, {"required", json::array()}}));
+
+    json mem_del_schema;
+    mem_del_schema["type"] = "object";
+    mem_del_schema["properties"]["key"] = {{"type", "string"}, {"description", "Memory key to delete"}};
+    mem_del_schema["required"] = json::array({"key"});
+    tools_arr.push_back(make_tool("delete_memory", "Delete a memory by key", mem_del_schema));
+
+    json write_schema;
+    write_schema["type"] = "object";
+    write_schema["properties"]["path"] = {{"type", "string"}, {"description", "File path to write"}};
+    write_schema["properties"]["content"] = {{"type", "string"}, {"description", "Content to write"}};
+    write_schema["required"] = json::array({"path", "content"});
+    tools_arr.push_back(make_tool("write_file", "Write content to a file (creates or overwrites)", write_schema));
+
+    json edit_schema;
+    edit_schema["type"] = "object";
+    edit_schema["properties"]["path"] = {{"type", "string"}, {"description", "File path to edit"}};
+    edit_schema["properties"]["old_text"] = {{"type", "string"}, {"description", "Text to find and replace"}};
+    edit_schema["properties"]["new_text"] = {{"type", "string"}, {"description", "Replacement text"}};
+    edit_schema["required"] = json::array({"path", "old_text", "new_text"});
+    tools_arr.push_back(make_tool("edit_file", "Find and replace text in an existing file", edit_schema));
+
+    json read_schema;
+    read_schema["type"] = "object";
+    read_schema["properties"]["path"] = {{"type", "string"}, {"description", "File path to read"}};
+    read_schema["required"] = json::array({"path"});
+    tools_arr.push_back(make_tool("read_file", "Read the contents of a file", read_schema));
+
+    j["tools"] = tools_arr;
     j["mcp_servers"] = json::array();
     j["skills"] = json::array();
     std::ofstream f(path);

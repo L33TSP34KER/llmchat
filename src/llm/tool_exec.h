@@ -11,5 +11,8 @@ namespace tool_exec {
     std::string execute_memory_get(const std::string& args_json);
     std::string execute_memory_list();
     std::string execute_memory_delete(const std::string& args_json);
+    std::string execute_write_file(const std::string& args_json);
+    std::string execute_edit_file(const std::string& args_json);
+    std::string execute_read_file(const std::string& args_json);
     bool is_mcp_tool(const std::string& name);
 }
