@@ -453,7 +453,8 @@ void ChatUI::handle_input(int ch) {
             if (input_buf_.empty()) return;
             std::vector<std::string> completions = {
                 "/clear", "/cls", "/help", "/skill",
-                "/deepsearch", "/stats", "/model", "/export", "/copy"
+                "/deepsearch", "/stats", "/model", "/export", "/copy",
+                "/review"
             };
             for (auto& s : config_->skills) {
                 completions.push_back("/skill " + s.name);
