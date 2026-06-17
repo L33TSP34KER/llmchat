@@ -36,6 +36,7 @@ public:
     void run();
     void stop();
     void set_state(const UIState& state);
+    void set_processing(bool p);
     void set_status_text(const std::string& text);
     void set_send_callback(SendCallback cb);
     void set_deep_search_callback(DeepSearchCallback cb);
@@ -87,33 +88,14 @@ private:
     std::atomic<bool> needs_redraw_{true};
 
     // Bracketed paste mode
+    bool ncurses_initialized_ = false;
     bool paste_mode_ = false;
     std::string paste_buf_;
     int esc_state_ = 0;
     std::string esc_buf_;
 
-    // Casino status bar state
-    std::string casino_frame_;
-    int casino_ticker_ = 0;
-    std::vector<std::string> casino_frames_ = {
-        " [ * ] SPINNING...  ",
-        " [-*-] ROLLING...   ",
-        " [/ \\] LUCKY DAY!  ",
-        " [ $ ] JACKPOT!     ",
-        " [@-@] DEALING...   ",
-        " [%~%] CRAPS!       ",
-        " [^_^] WILD CARD!   ",
-        " [###] WINNINGS!    ",
-    };
-    std::string status_content_;
-    bool use_casino_status_ = false;
-
-    // Tamagotchi state
-    std::chrono::steady_clock::time_point last_input_time_;
-    int tamagotchi_mood_ = TAMAGOTCHI_HAPPY;
     int anim_frame_ = 0;
 
-    void update_tamagotchi_mood();
     void init_ncurses();
     void cleanup_ncurses();
     void handle_resize();
@@ -128,8 +110,4 @@ private:
     void scroll_down(int lines);
     bool is_at_bottom();
     void update_input_height();
-
-    // Casino status
-    void update_casino_status();
-    std::string get_casino_frame();
 };

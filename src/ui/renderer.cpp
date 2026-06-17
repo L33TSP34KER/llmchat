@@ -288,17 +288,12 @@ static std::vector<SegLine> build_seg_lines(Conversation* conv, int max_x,
     if (entries.empty()) {
         {
             SegLine sl;
-            sl.segs.push_back({6, A_BOLD, ""});
+            sl.segs.push_back({8, A_NORMAL, "  \xe2\x94\x80\xe2\x94\x80 llmchat \xe2\x94\x80\xe2\x94\x80"});
             add_line(sl);
         }
         {
             SegLine sl;
-            sl.segs.push_back({6, A_BOLD, "  \xe2\x96\x8c llmchat"});
-            add_line(sl);
-        }
-        {
-            SegLine sl;
-            sl.segs.push_back({6, A_NORMAL, "  \xe2\x96\x8c  terminal AI chat client"});
+            sl.segs.push_back({8, A_NORMAL, "  terminal AI chat client"});
             add_line(sl);
         }
         {
@@ -308,17 +303,7 @@ static std::vector<SegLine> build_seg_lines(Conversation* conv, int max_x,
         }
         {
             SegLine sl;
-            sl.segs.push_back({8, A_NORMAL, "  \xe2\x96\x8c  Type a message to begin"});
-            add_line(sl);
-        }
-        {
-            SegLine sl;
-            sl.segs.push_back({8, A_NORMAL, "  \xe2\x96\x8c  /help for commands  "});
-            add_line(sl);
-        }
-        {
-            SegLine sl;
-            sl.segs.push_back({8, A_NORMAL, "  \xe2\x96\x8c  TAB for completion  "});
+            sl.segs.push_back({8, A_NORMAL, "  Type a message to begin"});
             add_line(sl);
         }
     }
@@ -345,13 +330,11 @@ static std::vector<SegLine> build_seg_lines(Conversation* conv, int max_x,
                 color = 3;
                 break;
             case ConversationEntry::TOOL_CALL:
-                label = "Tool: " + entry.tool_name;
-                color = 4;
+                label = "." + entry.tool_name;
+                color = 7;
                 break;
             case ConversationEntry::TOOL_RESULT:
-                label = "Result";
-                color = 1;
-                break;
+                continue;
             case ConversationEntry::ERROR:
                 label = "Error";
                 color = 5;
@@ -371,14 +354,22 @@ static std::vector<SegLine> build_seg_lines(Conversation* conv, int max_x,
         // Role label header (or grouping connector if same consecutive role)
         bool grouped = same_role;
         if (!grouped) {
-            std::string ts = format_timestamp(entry.timestamp);
-            std::string header = " \xe2\x96\x8c "; // " ▌ "
-            header += label;
-            if (!ts.empty()) {
-                header += "  \xe2\x80\xa2  " + ts;
+            std::string header;
+            int hdr_color = color;
+            int hdr_attr = A_BOLD;
+            if (entry.type == ConversationEntry::TOOL_CALL) {
+                header = "  " + label;
+                hdr_attr = A_DIM;
+                hdr_color = 7;
+            } else {
+                std::string ts = format_timestamp(entry.timestamp);
+                header = "  \xe2\x94\x80\xe2\x94\x80 " + label + " \xe2\x94\x80\xe2\x94\x80";
+                if (!ts.empty()) {
+                    header += " " + ts;
+                }
             }
             SegLine sl;
-            sl.segs.push_back({color, A_BOLD, header});
+            sl.segs.push_back({hdr_color, hdr_attr, header});
             add_line(sl);
         }
 
@@ -397,8 +388,11 @@ static std::vector<SegLine> build_seg_lines(Conversation* conv, int max_x,
         std::string gutter;
         std::string gutter_blank;
         if (grouped) {
-            gutter = " \xe2\x94\x82 ";     // " │ "
-            gutter_blank = "   ";
+            gutter = "  \xc2\xb7 ";        // "  · "
+            gutter_blank = "    ";
+        } else {
+            gutter = "  ";
+            gutter_blank = "  ";
         }
 
         for (auto& md_line : md_lines) {
@@ -418,21 +412,14 @@ static std::vector<SegLine> build_seg_lines(Conversation* conv, int max_x,
 
             // Code block with syntax highlighting
             if (md_line.is_code_block) {
-                // Header fence with language label
-                {
-                    SegLine sl;
-                    std::string fence = gutter_blank;
-                    for (int i = 0; i < content_w; i++) fence += "\xe2\x94\x80";
-                    sl.segs.push_back({4, A_BOLD, fence});
-                    if (!md_line.code_lang.empty()) {
-                        std::string lang_tag = " " + md_line.code_lang + " ";
-                        sl.segs.push_back({6, A_BOLD, lang_tag});
-                    }
-                    add_line(sl);
+                // Language tag line
+                if (!md_line.code_lang.empty()) {
+                    SegLine lsl;
+                    lsl.segs.push_back({7, A_DIM, gutter + "[" + md_line.code_lang + "]"});
+                    add_line(lsl);
                 }
                 // Syntax-highlighted code
                 auto hl_segs = md_syntax_highlight(md_line.segs[0].text, md_line.code_lang);
-                // Build an intermediate representation: lines of colored segments
                 struct CodeSeg { int color; int attr; std::string text; };
                 std::vector<std::vector<CodeSeg>> code_out_lines;
                 auto flush_code_out = [&]() {
@@ -440,7 +427,7 @@ static std::vector<SegLine> build_seg_lines(Conversation* conv, int max_x,
                         bool first = true;
                         for (auto& out_line : code_out_lines) {
                             SegLine sl;
-                            sl.segs.push_back({4, A_NORMAL, first ? gutter : gutter_blank});
+                            sl.segs.push_back({7, A_DIM, (first ? gutter : gutter_blank) + "\xe2\x94\x82 "});
                             for (auto& cs : out_line) {
                                 RenderSeg rs;
                                 rs.color = cs.color;
@@ -453,21 +440,20 @@ static std::vector<SegLine> build_seg_lines(Conversation* conv, int max_x,
                         code_out_lines.clear();
                     }
                 };
-                // For each highlighted segment, split by newline
                 for (auto& seg : hl_segs) {
-                    int syntax_color = 4;
+                    int syntax_color = 7;
                     int syntax_attr = A_NORMAL;
                     switch (seg.type) {
                         case MdSeg::SYNTAX_KEYWORD:   syntax_color = 9;  syntax_attr = A_BOLD; break;
                         case MdSeg::SYNTAX_STRING:    syntax_color = 10; break;
                         case MdSeg::SYNTAX_COMMENT:   syntax_color = 7;  syntax_attr = A_DIM; break;
-                        case MdSeg::SYNTAX_NUMBER:    syntax_color = 12; break;
-                        case MdSeg::SYNTAX_BUILTIN:   syntax_color = 13; syntax_attr = A_BOLD; break;
-                        case MdSeg::SYNTAX_PREPROC:   syntax_color = 14; syntax_attr = A_BOLD; break;
-                        case MdSeg::SYNTAX_OPERATOR:  syntax_color = 15; break;
+                        case MdSeg::SYNTAX_NUMBER:    syntax_color = 7;  syntax_attr = A_BOLD; break;
+                        case MdSeg::SYNTAX_BUILTIN:   syntax_color = 10; syntax_attr = A_BOLD; break;
+                        case MdSeg::SYNTAX_PREPROC:   syntax_color = 9;  syntax_attr = A_DIM; break;
+                        case MdSeg::SYNTAX_OPERATOR:  syntax_color = 7;  break;
                         case MdSeg::SYNTAX_FUNCTION:  syntax_color = 11; syntax_attr = A_BOLD; break;
-                        case MdSeg::SYNTAX_TYPE:      syntax_color = 12; syntax_attr = A_BOLD; break;
-                        case MdSeg::SYNTAX_ATTRIBUTE: syntax_color = 13; break;
+                        case MdSeg::SYNTAX_TYPE:      syntax_color = 10; syntax_attr = A_BOLD; break;
+                        case MdSeg::SYNTAX_ATTRIBUTE: syntax_color = 9;  break;
                         default: break;
                     }
                     std::string text = seg.text;
@@ -476,9 +462,8 @@ static std::vector<SegLine> build_seg_lines(Conversation* conv, int max_x,
                         size_t nl = text.find('\n', start);
                         std::string piece = (nl == std::string::npos) ? text.substr(start) : text.substr(start, nl - start);
                         if (piece.empty() && nl != std::string::npos) {
-                            // Emtpy line
                             flush_code_out();
-                            code_out_lines.push_back({}); // empty line
+                            code_out_lines.push_back({});
                             flush_code_out();
                         } else if (!piece.empty()) {
                             if (code_out_lines.empty()) code_out_lines.push_back({});
@@ -489,14 +474,6 @@ static std::vector<SegLine> build_seg_lines(Conversation* conv, int max_x,
                     }
                 }
                 flush_code_out();
-                // Footer fence
-                {
-                    SegLine sl;
-                    std::string fence = gutter_blank;
-                    for (int i = 0; i < content_w; i++) fence += "\xe2\x94\x80";
-                    sl.segs.push_back({4, A_BOLD, fence});
-                    add_line(sl);
-                }
                 continue;
             }
 
@@ -506,7 +483,7 @@ static std::vector<SegLine> build_seg_lines(Conversation* conv, int max_x,
                 for (int i = 0; i < content_w; i++) hr += "\xe2\x94\x80";
                 SegLine sl;
                 sl.is_sep = true;
-                sl.segs.push_back({color, A_BOLD, hr});
+                sl.segs.push_back({7, A_DIM, hr});
                 add_line(sl);
                 continue;
             }
@@ -601,16 +578,16 @@ static std::vector<SegLine> build_seg_lines(Conversation* conv, int max_x,
                 std::string ul;
                 for (int i = 0; i < content_w; i++) ul += "\xe2\x94\x80";
                 SegLine ul_sl;
-                ul_sl.segs.push_back({7, A_BOLD, gutter_blank + ul});
+                ul_sl.segs.push_back({7, A_DIM, gutter_blank + ul});
                 add_line(ul_sl);
             }
         }
         flush_table();
 
-        // Trailing blank line
-        SegLine blank;
-        blank.segs.push_back({-1, A_NORMAL, ""});
-        add_line(blank);
+        // Trailing separator
+        SegLine sep;
+        sep.segs.push_back({7, A_DIM, "  \xc2\xb7 \xc2\xb7 \xc2\xb7"});
+        add_line(sep);
     }
 
     return seg_lines;
@@ -702,37 +679,13 @@ int Renderer::entry_at_y(int screen_y, int scroll_offset) const {
     return line_to_entry_[line];
 }
 
-void Renderer::draw_tamagotchi(WINDOW* win, int mood, int anim_frame, int max_x) {
-    std::string face;
-    switch (mood) {
-        case TAMAGOTCHI_HAPPY:
-            face = (anim_frame % 16 < 8)
-                ? "\xe2\x97\x95\xe2\x80\xbf\xe2\x97\x95"   // ◕‿◕
-                : "\xe2\x97\x95\xcb\x98\xe2\x97\x95";       // ◕˘◕ (breathing)
-            break;
-        case TAMAGOTCHI_NEUTRAL:
-            face = "\xe2\x97\x95_\xe2\x97\x95"; break;      // ◕_◕
-        case TAMAGOTCHI_SAD:
-        default:
-            face = "\xe2\x97\x95\xef\xb9\x8f\xe2\x97\x95"; break; // ◕﹏◕
-    }
-
-    int face_w = str_width(face);
-    int x = max_x - face_w - 2;
-    if (x < 0) x = 0;
-    wattron(win, COLOR_PAIR(6) | A_BOLD);
-    mvwaddstr(win, 0, x, face.c_str());
-    wattroff(win, COLOR_PAIR(6) | A_BOLD);
-}
-
-void Renderer::draw_chat(Conversation* conv, int scroll_offset, bool is_streaming, int anim_color_idx, int tamagotchi_mood, int anim_frame) {
+void Renderer::draw_chat(Conversation* conv, int scroll_offset, bool is_streaming) {
     werase(chat_win_);
     int max_x = getmaxx(chat_win_);
     int max_y = getmaxy(chat_win_);
     if (max_x < 1 || max_y < 1) return;
 
-    draw_tamagotchi(chat_win_, tamagotchi_mood, anim_frame, max_x);
-
+    int anim_color_idx = 0; // streaming uses regular color (pair 2)
     auto seg_lines = build_seg_lines(conv, max_x, is_streaming, anim_color_idx, &line_to_entry_);
 
     int total_lines = seg_lines.size();
@@ -768,35 +721,18 @@ void Renderer::draw_chat(Conversation* conv, int scroll_offset, bool is_streamin
         }
     }
 
-    // Scroll indicators
-    if (scroll_offset > 0) {
-        mvwaddch(chat_win_, 0, max_x - 2, ACS_UARROW);
+    // Scroll indicators only (no scrollbar track/thumb)
+    if (scroll_offset > 0 && max_x > 1) {
+        mvwaddch(chat_win_, 0, max_x - 1, ACS_UARROW);
     }
-    if (total_lines > max_y && scroll_offset < total_lines - max_y) {
-        mvwaddch(chat_win_, max_y - 1, max_x - 2, ACS_DARROW);
-    }
-    // Scrollbar track and thumb
-    if (total_lines > max_y && max_y > 2) {
-        // Draw track
-        for (int ty = 0; ty < max_y; ty++) {
-            mvwaddch(chat_win_, ty, max_x - 1, ACS_VLINE | A_DIM);
-        }
-        // Draw thumb
-        float pct = (float)scroll_offset / (float)(total_lines - max_y);
-        int thumb_h = std::max(1, max_y * max_y / total_lines);
-        int thumb_y = (int)(pct * (max_y - thumb_h));
-        if (thumb_y + thumb_h > max_y) thumb_y = max_y - thumb_h;
-        for (int ty = 0; ty < thumb_h; ty++) {
-            wattron(chat_win_, COLOR_PAIR(6) | A_BOLD);
-            mvwaddch(chat_win_, thumb_y + ty, max_x - 1, ' ');
-            wattroff(chat_win_, COLOR_PAIR(6) | A_BOLD);
-        }
+    if (total_lines > max_y && scroll_offset < total_lines - max_y && max_x > 1) {
+        mvwaddch(chat_win_, max_y - 1, max_x - 1, ACS_DARROW);
     }
 
     wnoutrefresh(chat_win_);
 }
 
-void Renderer::draw_input(const std::string& input_buf, int cursor_pos, bool is_processing, int anim_color_idx, int anim_frame, int msg_count) {
+void Renderer::draw_input(const std::string& input_buf, int cursor_pos, int msg_count) {
     werase(input_win_);
     int max_x = getmaxx(input_win_);
     int max_y = getmaxy(input_win_);
@@ -880,48 +816,38 @@ void Renderer::draw_input(const std::string& input_buf, int cursor_pos, bool is_
         scroll_line = cursor_line - max_y + 1;
     }
 
-    // Draw "> " prompt on first visible line (only if it's line 0)
-    if (scroll_line == 0) {
-        wattron(input_win_, COLOR_PAIR(8) | A_BOLD);
-        mvwaddstr(input_win_, 0, 0, "> ");
-        wattroff(input_win_, COLOR_PAIR(8) | A_BOLD);
-    }
-
     // Draw visible wrapped lines
     for (int y = 0; y < max_y && y + scroll_line < (int)lines.size(); y++) {
         int actual_line = y + scroll_line;
-        std::string text = lines[actual_line];
-        wattron(input_win_, COLOR_PAIR(8));
-        mvwaddnstr(input_win_, y, 2, text.c_str(), avail);
-        wattroff(input_win_, COLOR_PAIR(8));
+        int prompt_col = 0;
+        std::string text;
+        if (scroll_line == 0 && actual_line == 0) {
+            // First visible line: "> prompt + text"
+            text = "> ";
+            prompt_col = 2;
+        }
+        text += lines[actual_line];
+        wattron(input_win_, COLOR_PAIR(8) | A_BOLD);
+        mvwaddnstr(input_win_, y, prompt_col, text.c_str(), max_x - prompt_col);
+        wattroff(input_win_, COLOR_PAIR(8) | A_BOLD);
     }
 
     // Position cursor
     int display_line = cursor_line - scroll_line;
     if (display_line >= 0 && display_line < max_y) {
-        wmove(input_win_, display_line, cursor_col + 2);
-    }
-
-    if (is_processing) {
-        static const char* dots[] = { "...", ".. ", ".  ", "   " };
-        int idx = (anim_frame / 3) % 4;
-        std::string gen = "generating";
-        gen += dots[idx];
-        wattron(input_win_, COLOR_PAIR(anim_color_idx) | A_BOLD);
-        mvwaddstr(input_win_, std::min(max_y - 1, (int)lines.size()), 0, gen.c_str());
-        wattroff(input_win_, COLOR_PAIR(anim_color_idx) | A_BOLD);
+        int prompt_offset = (scroll_line == 0 && cursor_line == 0) ? 2 : 0;
+        wmove(input_win_, display_line, cursor_col + prompt_offset);
     }
 
     wnoutrefresh(input_win_);
 }
 
-void Renderer::draw_status(bool is_processing, bool use_casino_status, const std::string& casino_frame,
+void Renderer::draw_status(bool is_processing,
                            const std::string& model_name, const std::string& status_text,
                            int anim_frame, const std::string& thinking_phrase) {
     werase(status_win_);
     int max_x = getmaxx(status_win_);
 
-    // Spinner animation: ⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏
     static const char* spinner_frames = "\xe2\xa0\x8b\xe2\xa0\x99\xe2\xa0\xb9\xe2\xa0\xb8\xe2\xa0\xbc\xe2\xa0\xb4\xe2\xa0\xa6\xe2\xa0\xa7\xe2\xa0\x87\xe2\xa0\x8f";
     int spin_idx = (anim_frame / 3) % 10;
     char spin_char[4] = {0};
@@ -931,20 +857,16 @@ void Renderer::draw_status(bool is_processing, bool use_casino_status, const std
 
     std::string left;
     if (is_processing) {
-        if (use_casino_status) {
-            left = casino_frame;
-        } else if (!thinking_phrase.empty()) {
-            left = spin_char;
-            if (!model_name.empty()) left += " " + model_name;
+        left = spin_char;
+        if (!model_name.empty()) left += " " + model_name;
+        if (!thinking_phrase.empty()) {
             left += " " + thinking_phrase;
         } else {
-            left = spin_char;
-            if (!model_name.empty()) left += " " + model_name;
             left += " working...";
         }
     } else {
         if (!model_name.empty()) {
-            left = "\xe2\x97\x8f " + model_name; // ● model
+            left = "\xe2\x97\x8f " + model_name;
         }
     }
 
@@ -953,29 +875,24 @@ void Renderer::draw_status(bool is_processing, bool use_casino_status, const std
         else left = status_text;
     }
 
-    std::string hints = "^C cancel  ^L clear  ^Y copy";
-
-    wattron(status_win_, COLOR_PAIR(6) | A_BOLD);
+    wattron(status_win_, COLOR_PAIR(7));
     mvwaddnstr(status_win_, 0, 0, left.c_str(), max_x);
-    wattroff(status_win_, COLOR_PAIR(6) | A_BOLD);
-
-    int hints_len = str_width(hints);
-    if (hints_len < max_x) {
-        wattron(status_win_, COLOR_PAIR(6));
-        mvwaddnstr(status_win_, 0, max_x - hints_len, hints.c_str(), hints_len);
-        wattroff(status_win_, COLOR_PAIR(6));
-    }
+    wattroff(status_win_, COLOR_PAIR(7));
 
     wnoutrefresh(status_win_);
 }
 
 void Renderer::draw_topbar(WINDOW* top_win, const std::string& title, int thinking_tokens, int anim_frame) {
     int max_x = getmaxx(top_win);
-    werase(top_win);
+
+    // Fill full bar with background color
+    wattron(top_win, COLOR_PAIR(6));
+    std::string bg(max_x, ' ');
+    mvwaddstr(top_win, 0, 0, bg.c_str());
+    wattroff(top_win, COLOR_PAIR(6));
 
     // Draw title on the left
     std::string display_title = title.empty() ? "llmchat" : title;
-    // Truncate to fit (leave room for button + padding)
     int max_title_w = max_x - 40;
     if ((int)display_title.size() > max_title_w && max_title_w > 0) {
         display_title = display_title.substr(0, max_title_w - 1) + "\xe2\x80\xa6";
@@ -1002,7 +919,7 @@ void Renderer::draw_topbar(WINDOW* top_win, const std::string& title, int thinki
     // Rainbow animation for GODMOD
     if (is_godmod) {
         int rainbow_idx = (anim_frame / 6) % 6;
-        int color_pair = 10 + rainbow_idx; // pairs 10-15 are rainbow colors
+        int color_pair = 10 + rainbow_idx;
         wattron(top_win, A_BOLD);
         wmove(top_win, 0, btn_x);
         waddch(top_win, ' ');
@@ -1014,9 +931,9 @@ void Renderer::draw_topbar(WINDOW* top_win, const std::string& title, int thinki
     } else {
         wmove(top_win, 0, btn_x);
         waddch(top_win, ' ');
-        wattron(top_win, COLOR_PAIR(6));
+        wattron(top_win, COLOR_PAIR(6) | A_BOLD);
         waddstr(top_win, btn_label.c_str());
-        wattroff(top_win, COLOR_PAIR(6));
+        wattroff(top_win, COLOR_PAIR(6) | A_BOLD);
         waddch(top_win, ' ');
     }
 

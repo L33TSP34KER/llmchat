@@ -36,6 +36,7 @@ add_executable(llmchat
     src/commands/stats_command.cpp
     src/commands/search_command.cpp
     src/commands/temp_command.cpp
+    src/commands/review_command.cpp
     src/features/feature_registry.cpp
     src/features/deepsearch_feature.cpp
     src/features/fileio_feature.cpp

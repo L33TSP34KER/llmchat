@@ -24,6 +24,7 @@
 #include "commands/skill_command.h"
 #include "commands/stats_command.h"
 #include "commands/search_command.h"
+#include "commands/review_command.h"
 #include "commands/temp_command.h"
 #include "features/feature_registry.h"
 #include "features/fileio_feature.h"
@@ -117,8 +118,8 @@ int main(int argc, char* argv[]) {
         conv.add_entry(ce);
     }
 
-    LlmClient llm(&config);
     ChatUI ui(&conv, &config);
+    LlmClient llm(&config);
 
     // First-run welcome + streak tracking
     std::string first_run_file = config.get_config_dir() + "/.first-run";
@@ -247,6 +248,7 @@ int main(int argc, char* argv[]) {
     cmd_registry.register_command(std::make_unique<StatsCommand>());
     cmd_registry.register_command(std::make_unique<SearchCommand>());
     cmd_registry.register_command(std::make_unique<TempCommand>());
+    cmd_registry.register_command(std::make_unique<ReviewCommand>());
 
     UIState uistate;
     uistate.model_name = config.model;
@@ -460,10 +462,7 @@ int main(int argc, char* argv[]) {
             cmd_ctx.clipboard_fn = [&](const std::string& t) -> bool { return copy_to_clipboard(t); };
 
             if (cmd_registry.execute(msg, cmd_ctx)) {
-                uistate.processing = false;
                 uistate.conversation_title = config.conversation_title;
-                uistate.status_text = "";
-                ui.set_state(uistate);
                 return;
             }
 

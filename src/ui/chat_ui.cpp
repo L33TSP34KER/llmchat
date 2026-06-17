@@ -11,8 +11,6 @@
 ChatUI::ChatUI(Conversation* conv, Config* config)
     : conv_(conv), config_(config) {
     theme_ = config->get_theme();
-    use_casino_status_ = theme_.casino_status_bar;
-    last_input_time_ = std::chrono::steady_clock::now();
 }
 
 ChatUI::~ChatUI() {
@@ -52,6 +50,11 @@ void ChatUI::set_state(const UIState& state) {
     needs_redraw_ = true;
 }
 
+void ChatUI::set_processing(bool p) {
+    state_.processing = p;
+    needs_redraw_ = true;
+}
+
 void ChatUI::notify_update() {
     needs_redraw_ = true;
 }
@@ -79,13 +82,15 @@ void ChatUI::init_ncurses() {
     renderer_.init_pairs(theme_.colors);
     renderer_.init_animation_colors(can_change_color());
     animation_.init(theme_.colors);
+    ncurses_initialized_ = true;
 }
 
 void ChatUI::cleanup_ncurses() {
-    printf("\033[?1000l\033[?1002l\033[?1003l\033[?1006l\033[?2004l");
-    mousemask(0, NULL);
+    if (!ncurses_initialized_) return;
+    ncurses_initialized_ = false;
     destroy_windows();
     endwin();
+    printf("\033[?1000l\033[?1002l\033[?1003l\033[?1006l\033[?2004l");
 }
 
 void ChatUI::create_windows() {
@@ -127,18 +132,12 @@ void ChatUI::handle_resize() {
     renderer_.set_windows(chat_win_, input_win_, status_win_);
     needs_redraw_ = true;
 }
-
 void ChatUI::draw_all() {
     if (!chat_win_) return;
 
     if (state_.processing) {
         animation_.advance();
     }
-    if (use_casino_status_ && state_.processing) {
-        update_casino_status();
-    }
-
-        update_tamagotchi_mood();
 
     anim_frame_++;
 
@@ -147,7 +146,7 @@ void ChatUI::draw_all() {
         scroll_offset_ = std::max(0, total - chat_height_);
     }
 
-    renderer_.draw_chat(conv_, scroll_offset_, state_.processing, animation_.get_color_index(), tamagotchi_mood_, anim_frame_);
+    renderer_.draw_chat(conv_, scroll_offset_, state_.processing);
     {
         auto entries = conv_->get_entries();
         int non_system = 0;
@@ -155,8 +154,9 @@ void ChatUI::draw_all() {
             if (e.type == ConversationEntry::USER || e.type == ConversationEntry::ASSISTANT)
                 non_system++;
         }
-        renderer_.draw_input(input_buf_, cursor_pos_, state_.processing, animation_.get_color_index(), anim_frame_, non_system);
+        renderer_.draw_input(input_buf_, cursor_pos_, non_system);
     }
+
     // Calculate thinking button position for popup + mouse tracking
     {
         std::string btn_label;
@@ -237,9 +237,7 @@ void ChatUI::draw_all() {
         wnoutrefresh(thinking_popup_win_);
     }
 
-    renderer_.draw_status(state_.processing, use_casino_status_, casino_frame_,
-                          state_.model_name, state_.status_text,
-                          anim_frame_, state_.thinking_phrase);
+    renderer_.draw_status(state_.processing, state_.model_name, state_.status_text, anim_frame_, state_.thinking_phrase);
     doupdate();
 }
 
@@ -447,6 +445,7 @@ void ChatUI::handle_input(int ch) {
             return;
 
         case 17:
+            if (state_.processing && cancel_cb_) cancel_cb_();
             should_exit_ = true;
             return;
 
@@ -515,21 +514,6 @@ void ChatUI::update_input_height() {
     }
 }
 
-void ChatUI::update_tamagotchi_mood() {
-    auto now = std::chrono::steady_clock::now();
-    auto idle = std::chrono::duration_cast<std::chrono::seconds>(now - last_input_time_).count();
-
-    if (state_.processing) {
-        tamagotchi_mood_ = TAMAGOTCHI_HAPPY;
-    } else if (idle < 30) {
-        tamagotchi_mood_ = TAMAGOTCHI_HAPPY;
-    } else if (idle < 120) {
-        tamagotchi_mood_ = TAMAGOTCHI_NEUTRAL;
-    } else {
-        tamagotchi_mood_ = TAMAGOTCHI_SAD;
-    }
-}
-
 void ChatUI::send_message() {
     std::string msg = input_buf_;
     if (msg.empty()) return;
@@ -550,7 +534,6 @@ void ChatUI::send_message() {
             scroll_offset_ = 0;
             input_buf_.clear();
             cursor_pos_ = 0;
-            last_input_time_ = std::chrono::steady_clock::now();
             if (clear_cb_) clear_cb_();
             return;
         }
@@ -600,7 +583,6 @@ void ChatUI::send_message() {
             state_.status_text = "Deep search started...";
             input_buf_.clear();
             cursor_pos_ = 0;
-            last_input_time_ = std::chrono::steady_clock::now();
             if (deep_search_cb_) deep_search_cb_(query);
             return;
         }
@@ -612,7 +594,6 @@ void ChatUI::send_message() {
         conv_->add_entry(ue);
         input_buf_.clear();
         cursor_pos_ = 0;
-        last_input_time_ = std::chrono::steady_clock::now();
         if (send_cb_) send_cb_(msg);
         return;
     }
@@ -625,7 +606,6 @@ void ChatUI::send_message() {
 
     input_buf_.clear();
     cursor_pos_ = 0;
-    last_input_time_ = std::chrono::steady_clock::now();
 
     if (send_cb_) send_cb_(msg);
 }
@@ -648,16 +628,6 @@ void ChatUI::scroll_down(int lines) {
     int max_scroll = std::max(0, total - chat_height_);
     was_at_bottom_ = (scroll_offset_ >= max_scroll);
     needs_redraw_ = true;
-}
-
-std::string ChatUI::get_casino_frame() {
-    int idx = (casino_ticker_ / 8) % casino_frames_.size();
-    return casino_frames_[idx];
-}
-
-void ChatUI::update_casino_status() {
-    casino_ticker_++;
-    casino_frame_ = get_casino_frame();
 }
 
 void ChatUI::run() {
