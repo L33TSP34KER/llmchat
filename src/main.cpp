@@ -474,7 +474,7 @@ int main(int argc, char* argv[]) {
         uistate.processing = true;
         uistate.status_text = "";
         ui.set_state(uistate);
-        llm.enqueue_message(msg, "");
+        llm.enqueue_message(msg, config.current_skill);
     });
 
     // Run the UI (blocking)
