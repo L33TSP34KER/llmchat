@@ -14,6 +14,23 @@
 #include "ui/chat_ui.h"
 #include "conversation.h"
 #include "mcp/manager.h"
+#include "commands/command_registry.h"
+#include "commands/clear_command.h"
+#include "commands/copy_command.h"
+#include "commands/deepsearch_command.h"
+#include "commands/export_command.h"
+#include "commands/help_command.h"
+#include "commands/model_command.h"
+#include "commands/skill_command.h"
+#include "commands/stats_command.h"
+#include "commands/search_command.h"
+#include "commands/temp_command.h"
+#include "features/feature_registry.h"
+#include "features/fileio_feature.h"
+#include "features/memory_feature.h"
+#include "features/terminal_feature.h"
+#include "features/arxiv_feature.h"
+#include "features/webfetch_feature.h"
 
 std::atomic<bool> g_running{true};
 
@@ -187,10 +204,53 @@ int main(int argc, char* argv[]) {
     MCPManager mcp_manager(&config);
     mcp_manager.start_all_async();
     llm.set_mcp_manager(&mcp_manager);
+
+    // Set up built-in feature registry
+    FeatureRegistry features;
+    features.register_feature(std::make_unique<FileIOFeature>());
+    features.register_feature(std::make_unique<MemoryFeature>());
+    features.register_feature(std::make_unique<TerminalFeature>());
+    features.register_feature(std::make_unique<ArxivFeature>());
+    features.register_feature(std::make_unique<WebFetchFeature>());
+    llm.set_features(&features);
+
     config.save();
+
+    // Load saved memories into LLM context at startup
+    auto inject_memories = [&]() {
+        std::string mem_path = Config::get_config_dir() + "/memory.json";
+        std::ifstream mf(mem_path);
+        if (!mf.is_open()) return;
+        try {
+            json mem;
+            mf >> mem;
+            if (mem.is_object() && !mem.empty()) {
+                std::string ctx = "## Saved user information\n\n";
+                for (auto it = mem.begin(); it != mem.end(); ++it) {
+                    ctx += "- " + it.key() + ": " + it.value().get<std::string>() + "\n";
+                }
+                llm.add_system_message(ctx);
+            }
+        } catch (...) {}
+    };
+    inject_memories();
+
+    // Set up command registry
+    CommandRegistry cmd_registry;
+    cmd_registry.register_command(std::make_unique<ClearCommand>());
+    cmd_registry.register_command(std::make_unique<CopyCommand>());
+    cmd_registry.register_command(std::make_unique<DeepSearchCommand>());
+    cmd_registry.register_command(std::make_unique<ExportCommand>());
+    cmd_registry.register_command(std::make_unique<HelpCommand>());
+    cmd_registry.register_command(std::make_unique<ModelCommand>());
+    cmd_registry.register_command(std::make_unique<SkillCommand>());
+    cmd_registry.register_command(std::make_unique<StatsCommand>());
+    cmd_registry.register_command(std::make_unique<SearchCommand>());
+    cmd_registry.register_command(std::make_unique<TempCommand>());
 
     UIState uistate;
     uistate.model_name = config.model;
+    uistate.conversation_title = config.conversation_title;
     ui.set_state(uistate);
 
     // Wire up stream events from LLM to UI
@@ -306,6 +366,10 @@ int main(int argc, char* argv[]) {
     // Clear callback: clear LLM client state too
     ui.set_clear_callback([&]() {
         llm.clear_conversation();
+        inject_memories();
+        config.conversation_title = "";
+        uistate.conversation_title = "";
+        ui.set_state(uistate);
     });
 
     // Cancel callback: cancel current request
@@ -337,6 +401,17 @@ int main(int argc, char* argv[]) {
         ui.set_state(uistate);
     });
 
+    // Wire up auto-naming title callback
+    llm.set_title_callback([&](const std::string& title) {
+        config.conversation_title = title;
+        uistate.conversation_title = title;
+        uistate.status_text = "";
+        ui.set_state(uistate);
+    });
+
+    // Handle title display in DONE events
+    // (the DONE handler already resets status, but we keep title in model_name area)
+
     // Wire up deep search callback
     ui.set_deep_search_callback([&](const std::string& query) {
         uistate.processing = true;
@@ -348,176 +423,46 @@ int main(int argc, char* argv[]) {
 
     // Wire up send callback from UI to LLM
     ui.set_send_callback([&](const std::string& msg) {
-        uistate.processing = true;
-        uistate.status_text = "";
-        ui.set_state(uistate);
-
-        std::string skill = "";
-        if (msg[0] == '/') {
+        if (!msg.empty() && msg[0] == '/') {
             std::string cmdline = msg.substr(1);
             std::string cmd = cmdline;
-            std::string args;
             size_t sp = cmdline.find(' ');
-            if (sp != std::string::npos) {
-                cmd = cmdline.substr(0, sp);
-                args = cmdline.substr(sp + 1);
-            }
+            if (sp != std::string::npos) cmd = cmdline.substr(0, sp);
 
-            if (cmd == "skill") {
-                skill = args;
-                skill.erase(0, skill.find_first_not_of(" \t"));
-                skill.erase(skill.find_last_not_of(" \t") + 1);
-                uistate.status_text = "Skill: " + (skill.empty() ? "(default)" : skill);
-                ui.set_state(uistate);
-                return;
-            }
-
-            if (cmd == "help") {
-                ConversationEntry he;
-                he.type = ConversationEntry::SYSTEM;
-                he.content =
-                    "## Commands\n"
-                    "\n"
-                    "| Command | Description |\n"
-                    "|---------|-------------|\n"
-                    "| `/clear` | Clear conversation |\n"
-                    "| `/help` | Show this help |\n"
-                    "| `/skill <name>` | Switch skill |\n"
-                    "| `/deepsearch <q>` | Start deep search |\n"
-                    "| `/stats` | Show session statistics |\n"
-                    "| `/model <name>` | Switch model (session only) |\n"
-                    "| `/export` | Export conversation to markdown |\n"
-                    "| `/copy <N>` | Copy message N to clipboard |\n"
-                    "\n"
-                    "### Shortcuts\n"
-                    "\n"
-                    "- **Ctrl+Y** — Copy last assistant answer\n"
-                    "- **Ctrl+C** — Cancel current request\n"
-                    "- **Ctrl+L** — Clear screen\n"
-                    "- **Ctrl+Q** — Quit\n"
-                    "- **PgUp/PgDn** — Scroll chat\n"
-                    "- **TAB** — Command completion";
-                he.timestamp = std::time(nullptr);
-                conv.add_entry(he);
-                ui.notify_update();
-                uistate.processing = false;
-                ui.set_state(uistate);
-                return;
-            }
-
-            if (cmd == "stats") {
-                auto entries = conv.get_entries();
-                int user_msgs = 0, asst_msgs = 0, tool_calls = 0, errors = 0;
-                for (auto& e : entries) {
-                    switch (e.type) {
-                        case ConversationEntry::USER: user_msgs++; break;
-                        case ConversationEntry::ASSISTANT: asst_msgs++; break;
-                        case ConversationEntry::TOOL_CALL: tool_calls++; break;
-                        case ConversationEntry::ERROR: errors++; break;
-                        default: break;
-                    }
+            // Handle agentic mode inline (simple wrapper)
+            if (cmd == "agent") {
+                std::string query = (sp != std::string::npos) ? cmdline.substr(sp + 1) : "";
+                if (query.empty()) {
+                    uistate.status_text = "Usage: /agent <task>";
+                    uistate.processing = false;
+                    ui.set_state(uistate);
+                    return;
                 }
-                char timebuf[64];
-                auto now = std::time(nullptr);
-                std::strftime(timebuf, sizeof(timebuf), "%H:%M:%S", std::localtime(&now));
-                auto& msgs = llm.get_messages();
-                int total_chars = llm.estimate_total_chars();
-                ConversationEntry se;
-                se.type = ConversationEntry::SYSTEM;
-                se.content =
-                    "## Session Stats\n"
-                    "\n"
-                    "| Metric | Value |\n"
-                    "|--------|-------|\n"
-                    "| Messages sent | " + std::to_string(user_msgs) + " |\n"
-                    "| Responses received | " + std::to_string(asst_msgs) + " |\n"
-                    "| Tool calls made | " + std::to_string(tool_calls) + " |\n"
-                    "| Errors | " + std::to_string(errors) + " |\n"
-                    "| API messages | " + std::to_string(msgs.size()) + " |\n"
-                    "| Est. context chars | " + std::to_string(total_chars) + " |\n"
-                    "| Current time | " + timebuf + " |";
-                se.timestamp = now;
-                conv.add_entry(se);
-                ui.notify_update();
-                uistate.processing = false;
+                ConversationEntry ue;
+                ue.type = ConversationEntry::USER;
+                ue.content = "/agent " + query;
+                ue.timestamp = std::time(nullptr);
+                conv.add_entry(ue);
+                uistate.processing = true;
+                uistate.status_text = "Agentic: " + query.substr(0, 40);
                 ui.set_state(uistate);
+                llm.set_agentic(true);
+                llm.enqueue_message(query);
                 return;
             }
 
-            if (cmd == "model") {
-                if (args.empty()) {
-                    ConversationEntry me;
-                    me.type = ConversationEntry::SYSTEM;
-                    me.content = "Current model: **" + config.model + "**\n"
-                                 "Usage: `/model <name>` — change model for this session";
-                    me.timestamp = std::time(nullptr);
-                    conv.add_entry(me);
-                } else {
-                    config.model = args;
-                    uistate.model_name = config.model;
-                    ConversationEntry me;
-                    me.type = ConversationEntry::SYSTEM;
-                    me.content = "Switched model to **" + config.model + "**";
-                    me.timestamp = std::time(nullptr);
-                    conv.add_entry(me);
-                }
-                ui.notify_update();
-                uistate.processing = false;
-                ui.set_state(uistate);
-                return;
-            }
+            CommandContext cmd_ctx;
+            cmd_ctx.conv = &conv;
+            cmd_ctx.config = &config;
+            cmd_ctx.llm = &llm;
+            cmd_ctx.ui = &ui;
+            cmd_ctx.cmd_registry = &cmd_registry;
+            cmd_ctx.clipboard_fn = [&](const std::string& t) -> bool { return copy_to_clipboard(t); };
 
-            if (cmd == "deepsearch") {
-                uistate.status_text = "Use: /deepsearch <query>";
+            if (cmd_registry.execute(msg, cmd_ctx)) {
                 uistate.processing = false;
-                ui.set_state(uistate);
-                return;
-            }
-
-            if (cmd == "export") {
-                auto entries = conv.get_entries();
-                std::string filename = "llmchat-export-" + std::to_string(std::time(nullptr)) + ".md";
-                std::ofstream f(filename);
-                if (f.is_open()) {
-                    std::time_t now_export = std::time(nullptr);
-                    f << "# llmchat Conversation Export\n\n";
-                    f << "Exported at: " << std::ctime(&now_export) << "\n\n";
-                    f << "---\n\n";
-                    for (auto& e : entries) {
-                        const char* role = "";
-                        switch (e.type) {
-                            case ConversationEntry::USER: role = "User"; break;
-                            case ConversationEntry::ASSISTANT: role = "Assistant"; break;
-                            case ConversationEntry::SYSTEM: role = "System"; break;
-                            case ConversationEntry::TOOL_CALL:
-                                role = ("Tool Call: " + e.tool_name).c_str();
-                                break;
-                            case ConversationEntry::TOOL_RESULT:
-                                role = ("Tool Result: " + e.tool_name).c_str();
-                                break;
-                            case ConversationEntry::ERROR: role = "Error"; break;
-                        }
-                        char tbuf[32];
-                        std::strftime(tbuf, sizeof(tbuf), "%H:%M",
-                            std::localtime(&e.timestamp));
-                        f << "### " << role << "  •  " << tbuf << "\n\n";
-                        f << e.content << "\n\n";
-                    }
-                    f.close();
-                    ConversationEntry me;
-                    me.type = ConversationEntry::SYSTEM;
-                    me.content = "Exported conversation to **" + filename + "**";
-                    me.timestamp = std::time(nullptr);
-                    conv.add_entry(me);
-                } else {
-                    ConversationEntry me;
-                    me.type = ConversationEntry::ERROR;
-                    me.content = "Error: could not write to " + filename;
-                    me.timestamp = std::time(nullptr);
-                    conv.add_entry(me);
-                }
-                ui.notify_update();
-                uistate.processing = false;
+                uistate.conversation_title = config.conversation_title;
+                uistate.status_text = "";
                 ui.set_state(uistate);
                 return;
             }
@@ -527,7 +472,10 @@ int main(int argc, char* argv[]) {
             return;
         }
 
-        llm.enqueue_message(msg, skill);
+        uistate.processing = true;
+        uistate.status_text = "";
+        ui.set_state(uistate);
+        llm.enqueue_message(msg, "");
     });
 
     // Run the UI (blocking)

@@ -458,12 +458,16 @@ static std::vector<SegLine> build_seg_lines(Conversation* conv, int max_x,
                     int syntax_color = 4;
                     int syntax_attr = A_NORMAL;
                     switch (seg.type) {
-                        case MdSeg::SYNTAX_KEYWORD: syntax_color = 9; syntax_attr = A_BOLD; break;
-                        case MdSeg::SYNTAX_STRING:  syntax_color = 3; break;
-                        case MdSeg::SYNTAX_COMMENT: syntax_color = 7; syntax_attr = A_DIM; break;
-                        case MdSeg::SYNTAX_NUMBER:  syntax_color = 9; break;
-                        case MdSeg::SYNTAX_BUILTIN: syntax_color = 4; syntax_attr = A_BOLD; break;
-                        case MdSeg::SYNTAX_PREPROC: syntax_color = 4; syntax_attr = A_BOLD; break;
+                        case MdSeg::SYNTAX_KEYWORD:   syntax_color = 9;  syntax_attr = A_BOLD; break;
+                        case MdSeg::SYNTAX_STRING:    syntax_color = 10; break;
+                        case MdSeg::SYNTAX_COMMENT:   syntax_color = 7;  syntax_attr = A_DIM; break;
+                        case MdSeg::SYNTAX_NUMBER:    syntax_color = 12; break;
+                        case MdSeg::SYNTAX_BUILTIN:   syntax_color = 13; syntax_attr = A_BOLD; break;
+                        case MdSeg::SYNTAX_PREPROC:   syntax_color = 14; syntax_attr = A_BOLD; break;
+                        case MdSeg::SYNTAX_OPERATOR:  syntax_color = 15; break;
+                        case MdSeg::SYNTAX_FUNCTION:  syntax_color = 11; syntax_attr = A_BOLD; break;
+                        case MdSeg::SYNTAX_TYPE:      syntax_color = 12; syntax_attr = A_BOLD; break;
+                        case MdSeg::SYNTAX_ATTRIBUTE: syntax_color = 13; break;
                         default: break;
                     }
                     std::string text = seg.text;
@@ -917,22 +921,26 @@ void Renderer::draw_status(bool is_processing, bool use_casino_status, const std
     werase(status_win_);
     int max_x = getmaxx(status_win_);
 
-    // Dot animation: . → .. → ... → .. → . → ...
-    static const char* dot_states[] = { ".", "..", "...", ".." };
-    int dot_idx = (anim_frame / 4) % 4;
+    // Spinner animation: ⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏
+    static const char* spinner_frames = "\xe2\xa0\x8b\xe2\xa0\x99\xe2\xa0\xb9\xe2\xa0\xb8\xe2\xa0\xbc\xe2\xa0\xb4\xe2\xa0\xa6\xe2\xa0\xa7\xe2\xa0\x87\xe2\xa0\x8f";
+    int spin_idx = (anim_frame / 3) % 10;
+    char spin_char[4] = {0};
+    spin_char[0] = spinner_frames[spin_idx * 3];
+    spin_char[1] = spinner_frames[spin_idx * 3 + 1];
+    spin_char[2] = spinner_frames[spin_idx * 3 + 2];
 
     std::string left;
     if (is_processing) {
         if (use_casino_status) {
             left = casino_frame;
         } else if (!thinking_phrase.empty()) {
-            left = "\xe2\x97\x8f"; // ●
+            left = spin_char;
             if (!model_name.empty()) left += " " + model_name;
-            left += " " + thinking_phrase + dot_states[dot_idx];
+            left += " " + thinking_phrase;
         } else {
-            left = "\xe2\x97\x8f"; // ●
+            left = spin_char;
             if (!model_name.empty()) left += " " + model_name;
-            left += " generating...";
+            left += " working...";
         }
     } else {
         if (!model_name.empty()) {
@@ -959,4 +967,58 @@ void Renderer::draw_status(bool is_processing, bool use_casino_status, const std
     }
 
     wnoutrefresh(status_win_);
+}
+
+void Renderer::draw_topbar(WINDOW* top_win, const std::string& title, int thinking_tokens, int anim_frame) {
+    int max_x = getmaxx(top_win);
+    werase(top_win);
+
+    // Draw title on the left
+    std::string display_title = title.empty() ? "llmchat" : title;
+    // Truncate to fit (leave room for button + padding)
+    int max_title_w = max_x - 40;
+    if ((int)display_title.size() > max_title_w && max_title_w > 0) {
+        display_title = display_title.substr(0, max_title_w - 1) + "\xe2\x80\xa6";
+    }
+
+    wattron(top_win, COLOR_PAIR(6) | A_BOLD);
+    mvwaddnstr(top_win, 0, 2, display_title.c_str(), max_x - 4);
+    wattroff(top_win, COLOR_PAIR(6) | A_BOLD);
+
+    // Draw thinking button on the right
+    std::string btn_label;
+    bool is_godmod = false;
+    switch (thinking_tokens) {
+        case 0:    btn_label = "\xf0\x9f\xa7\xa0 None"; break;
+        case 128:  btn_label = "\xf0\x9f\xa7\xa0 Minimal"; break;
+        case 250:  btn_label = "\xf0\x9f\xa7\xa0 Medium"; break;
+        case 512:  btn_label = "\xf0\x9f\xa7\xa0 Normal"; break;
+        case 1024: btn_label = "\xf0\x9f\xa7\xa0 High"; break;
+        default:   btn_label = "\xf0\x9f\xa7\xa0 GODMOD"; is_godmod = true; break;
+    }
+
+    int btn_x = max_x - (int)str_width(btn_label) - 5;
+
+    // Rainbow animation for GODMOD
+    if (is_godmod) {
+        int rainbow_idx = (anim_frame / 6) % 6;
+        int color_pair = 10 + rainbow_idx; // pairs 10-15 are rainbow colors
+        wattron(top_win, A_BOLD);
+        wmove(top_win, 0, btn_x);
+        waddch(top_win, ' ');
+        wattron(top_win, COLOR_PAIR(color_pair));
+        waddstr(top_win, btn_label.c_str());
+        wattroff(top_win, COLOR_PAIR(color_pair));
+        waddch(top_win, ' ');
+        wattroff(top_win, A_BOLD);
+    } else {
+        wmove(top_win, 0, btn_x);
+        waddch(top_win, ' ');
+        wattron(top_win, COLOR_PAIR(6));
+        waddstr(top_win, btn_label.c_str());
+        wattroff(top_win, COLOR_PAIR(6));
+        waddch(top_win, ' ');
+    }
+
+    wnoutrefresh(top_win);
 }

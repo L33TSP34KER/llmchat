@@ -882,55 +882,126 @@ static bool is_syntax_keyword(const std::string& word, const std::string& lang) 
                "union","unsigned","void","volatile","while","include","define","ifdef",
                "endif","pragma","NULL","bool","true","false","nullptr"}},
         {"cpp", {"alignas","alignof","auto","bool","break","case","catch","char","class",
-                 "const","constexpr","continue","decltype","default","delete","do","double",
-                 "else","enum","explicit","export","extern","false","float","for","friend",
-                 "goto","if","include","inline","int","long","mutable","namespace","new",
-                 "noexcept","nullptr","operator","override","private","protected","public",
-                 "register","return","short","signed","sizeof","static","static_cast",
-                 "struct","switch","template","this","throw","true","try","typedef","typeid",
-                 "typename","union","unsigned","using","virtual","void","volatile","while",
-                 "define","ifdef","endif","pragma","include","NULL","std","string","vector",
-                 "map","set","unordered_map","shared_ptr","unique_ptr","make_shared",
-                 "make_unique","cout","cin","endl"}},
+                 "const","constexpr","concept","continue","decltype","default","delete","do",
+                 "double","else","enum","explicit","export","extern","false","float","for",
+                 "friend","goto","if","include","inline","int","long","mutable","namespace",
+                 "new","noexcept","nullptr","operator","override","private","protected",
+                 "public","register","requires","return","short","signed","sizeof","static",
+                 "static_cast","struct","switch","template","this","throw","true","try",
+                 "typedef","typeid","typename","union","unsigned","using","virtual","void",
+                 "volatile","while","define","ifdef","endif","pragma","include","NULL"}},
+        {"csharp", {"abstract","as","async","await","base","bool","break","byte","case",
+                    "catch","char","checked","class","const","continue","decimal","default",
+                    "delegate","do","double","else","enum","event","explicit","extern",
+                    "false","finally","fixed","float","for","foreach","goto","if","implicit",
+                    "in","int","interface","internal","is","lock","long","namespace","new",
+                    "null","object","operator","out","override","params","private","protected",
+                    "public","readonly","ref","return","sbyte","sealed","short","sizeof",
+                    "stackalloc","static","string","struct","switch","this","throw","true",
+                    "try","typeof","uint","ulong","unchecked","unsafe","ushort","using",
+                    "var","virtual","void","volatile","while","async","await","yield"}},
         {"python", {"False","None","True","and","as","assert","async","await","break","class",
                     "continue","def","del","elif","else","except","finally","for","from",
-                    "global","if","import","in","is","lambda","nonlocal","not","or","pass",
-                    "raise","return","try","while","with","yield","print","range","len",
-                    "self","super","open","int","str","float","list","dict","set","tuple",
-                    "type","isinstance","enumerate","zip","map","filter","sorted","reversed"}},
+                    "global","if","import","in","is","lambda","match","nonlocal","not","or",
+                    "pass","raise","return","try","while","with","yield","case"}},
+        {"ruby", {"BEGIN","END","__ENCODING__","__END__","__FILE__","__LINE__","alias","and",
+                  "begin","break","case","class","def","defined?","do","else","elsif","end",
+                  "ensure","false","for","if","in","module","next","nil","not","or","redo",
+                  "rescue","retry","return","self","super","then","true","undef","unless",
+                  "until","when","while","yield"}},
         {"javascript", {"async","await","break","case","catch","class","const","continue",
                         "debugger","default","delete","do","else","export","extends","false",
                         "finally","for","function","if","import","in","instanceof","let",
                         "new","null","of","return","super","switch","this","throw","true",
-                        "try","typeof","var","void","while","with","yield","console","log",
-                        "require","module","exports","undefined","NaN","Array","Object",
-                        "String","Number","Promise","Map","Set"}},
-        {"typescript", {"async","await","break","case","catch","class","const","continue",
-                        "debugger","default","delete","do","else","enum","export","extends",
-                        "false","finally","for","function","if","import","in","instanceof",
-                        "interface","let","new","null","of","return","super","switch","this",
-                        "throw","true","try","type","typeof","var","void","while","with",
-                        "yield","console","log","require","module","exports","undefined",
-                        "NaN","Array","Object","String","Number","Promise","Map","Set",
-                        "any","never","unknown","string","number","boolean","void"}},
+                        "try","typeof","var","void","while","with","yield"}},
+        {"typescript", {"abstract","as","async","await","break","case","catch","class","const",
+                        "continue","debugger","declare","default","delete","do","else","enum",
+                        "export","extends","false","finally","for","function","if","implements",
+                        "import","in","instanceof","interface","is","keyof","let","module",
+                        "namespace","never","new","null","of","readonly","return","satisfies",
+                        "static","super","switch","this","throw","true","try","type","typeof",
+                        "undefined","unique","unknown","var","void","while","with","yield"}},
+        {"go", {"break","case","chan","const","continue","default","defer","else","fallthrough",
+                "for","func","go","goto","if","import","interface","map","package","range",
+                "return","select","struct","switch","type","var","true","false","nil"}},
         {"rust", {"as","async","await","break","const","continue","crate","dyn","else","enum",
                   "extern","false","fn","for","if","impl","in","let","loop","match","mod",
                   "move","mut","pub","ref","return","self","Self","static","struct","super",
-                  "trait","true","type","unsafe","use","where","while","Some","None","Ok",
-                  "Err","String","Vec","HashMap","Box","Arc","Mutex"}},
-        {"go", {"break","case","chan","const","continue","default","defer","else","fallthrough",
-                "for","func","go","goto","if","import","interface","map","package","range",
-                "return","select","struct","switch","type","var","true","false","nil",
-                "string","int","bool","float64","error","byte","rune","uint","int64",
-                "make","len","cap","append","delete","close"}},
+                  "trait","true","type","unsafe","use","where","while","yield"}},
         {"java", {"abstract","assert","boolean","break","byte","case","catch","char","class",
-                  "const","continue","default","do","double","else","enum","extends","false",
-                  "final","finally","float","for","goto","if","implements","import","instanceof",
-                  "int","interface","long","native","new","null","package","private","protected",
-                  "public","return","short","static","strictfp","super","switch","synchronized",
-                  "this","throw","throws","transient","true","try","void","volatile","while",
-                  "String","System","out","println","print","Integer","ArrayList","HashMap",
-                  "List","Map","Set","Object"}},
+                  "const","continue","default","do","double","else","enum","exports","extends",
+                  "false","final","finally","float","for","goto","if","implements","import",
+                  "instanceof","int","interface","long","module","native","new","null","open",
+                  "opens","package","permits","private","protected","provides","public",
+                  "record","requires","return","sealed","short","static","strictfp","super",
+                  "switch","synchronized","this","throw","throws","to","transient","transitive",
+                  "true","try","uses","var","void","volatile","while","with","yield"}},
+        {"kotlin", {"abstract","actual","annotation","as","as?","break","by","catch","class",
+                    "companion","const","constructor","continue","crossinline","data","delegate",
+                    "do","dynamic","else","enum","expect","external","false","field","file",
+                    "final","finally","for","fun","if","import","in","infix","init","inline",
+                    "inner","interface","internal","is","it","lateinit","noinline","null",
+                    "object","open","operator","out","override","package","param","private",
+                    "property","protected","public","receiver","reified","return","sealed",
+                    "set","super","suspend","tailrec","this","throw","true","try","typealias",
+                    "typeof","val","var","vararg","when","while"}},
+        {"swift", {"any","as","associativity","async","await","break","case","catch","class",
+                   "continue","convenience","default","defer","deinit","didSet","do","dynamic",
+                   "else","enum","extension","fallthrough","false","fileprivate","final","for",
+                   "func","get","guard","if","import","in","indirect","infix","init","inout",
+                   "internal","is","lazy","left","let","mutating","nil","none","nonmutating",
+                   "open","operator","optional","override","package","postfix","precedence",
+                   "prefix","private","protocol","public","repeat","required","rethrows",
+                   "return","right","self","Self","set","some","static","struct","subscript",
+                   "super","switch","throw","throws","true","try","typealias","unowned",
+                   "var","weak","where","while","willSet"}},
+        {"php", {"__CLASS__","__DIR__","__FILE__","__FUNCTION__","__LINE__","__METHOD__",
+                 "__NAMESPACE__","__TRAIT__","abstract","and","array","as","break","callable",
+                 "case","catch","class","clone","const","continue","declare","default","die",
+                 "do","echo","else","elseif","empty","enddeclare","endfor","endforeach","endif",
+                 "endswitch","endwhile","enum","eval","exit","extends","false","final",
+                 "finally","fn","for","foreach","function","global","goto","if","implements",
+                 "include","include_once","instanceof","insteadof","interface","isset","list",
+                 "match","mixed","namespace","new","null","or","print","private","protected",
+                 "public","readonly","require","require_once","return","static","switch",
+                 "throw","trait","true","try","unset","use","var","while","xor","yield"}},
+        {"lua", {"and","break","do","else","elseif","end","false","for","function","goto","if",
+                 "in","local","nil","not","or","repeat","return","then","true","until","while"}},
+        {"scala", {"abstract","case","catch","class","def","do","else","enum","export","extends",
+                   "false","final","finally","for","given","if","implicit","import","lazy",
+                   "match","new","null","object","override","package","private","protected",
+                   "return","sealed","super","then","throw","trait","true","try","type","using",
+                   "val","var","while","with","yield"}},
+        {"perl", {"__DATA__","__END__","__FILE__","__LINE__","abs","alarm","and","caller",
+                  "chdir","chmod","chomp","chop","close","cmp","connect","continue","cos",
+                  "crypt","die","do","dump","each","else","elsif","endgrent","endhostent",
+                  "endnetent","endprotoent","endpwent","endservent","eof","eq","eval","exec",
+                  "exists","exit","exp","fcntl","fileno","flock","for","foreach","fork","format",
+                  "formline","ge","getc","getgrgid","getgrnam","gethostbyaddr","gethostbyname",
+                  "gethostent","getlogin","getnetbyaddr","getnetbyname","getnetent","getpeername",
+                  "getpgrp","getppid","getpriority","getprotobyname","getprotobynumber",
+                  "getprotoent","getpwent","getpwnam","getpwuid","getservbyname","getservbyport",
+                  "getservent","getsockname","getsockopt","glob","gmtime","goto","grep","gt",
+                  "hex","if","index","int","ioctl","join","keys","kill","last","lc","lcfirst",
+                  "length","link","listen","local","localtime","lock","log","lstat","lt","map",
+                  "mkdir","msgctl","msgget","msgrcv","msgsnd","my","ne","next","no","not","oct",
+                  "open","opendir","or","our","pack","package","pipe","pop","pos","print",
+                  "printf","prototype","push","quotemeta","rand","read","readdir","readline",
+                  "readlink","readpipe","recv","redo","ref","rename","require","reset","return",
+                  "reverse","rewinddir","rindex","rmdir","say","scalar","seek","seekdir","select",
+                  "semctl","semget","semop","send","setgrent","sethostent","setnetent","setpgrp",
+                  "setpriority","setprotoent","setpwent","setservent","setsockopt","shift",
+                  "shmctl","shmget","shmread","shmwrite","shutdown","sin","sleep","socket",
+                  "socketpair","sort","splice","split","sprintf","sqrt","srand","stat","state",
+                  "study","substr","symlink","syscall","sysopen","sysread","sysseek","system",
+                  "syswrite","tell","telldir","tie","tied","time","times","truncate","uc",
+                  "ucfirst","umask","undef","unless","unlink","unpack","unshift","untie","until",
+                  "use","utime","values","vec","wait","waitpid","wantarray","warn","while",
+                  "write","xor","y"}},
+        {"haskell", {"case","class","data","default","deriving","do","else","family","forall",
+                     "foreign","hiding","if","import","in","infix","infixl","infixr","instance",
+                     "let","module","newtype","of","open","pattern","qualified","role","safe",
+                     "type","where","mdo","rec","proc","group","then"}},
         {"bash", {"if","then","else","elif","fi","for","while","do","done","case","esac",
                   "function","in","return","exit","break","continue","select","until","time",
                   "[[","]]","echo","export","local","source","unset","set","shift","trap",
@@ -944,10 +1015,222 @@ static bool is_syntax_keyword(const std::string& word, const std::string& lang) 
 
 static bool is_syntax_builtin(const std::string& word, const std::string& lang) {
     static const std::unordered_map<std::string, std::vector<std::string>> builtins = {
-        {"python", {"__init__","__str__","__repr__","__len__","__call__","__getitem__",
-                    "__setitem__","__enter__","__exit__","__add__","__sub__","__mul__"}},
-        {"javascript", {"window","document","setTimeout","setInterval","fetch","localStorage",
-                        "sessionStorage","JSON","Math","Date","RegExp","Error","console"}},
+        {"c", {"printf","scanf","fprintf","fscanf","sprintf","sscanf","malloc","calloc",
+               "realloc","free","memcpy","memset","memmove","strlen","strcmp","strcpy",
+               "strcat","strstr","strchr","fopen","fclose","fread","fwrite","fgets",
+               "fputs","fgetc","fputc","fseek","ftell","rewind","feof","ferror","exit",
+               "abort","assert","abs","sin","cos","tan","sqrt","pow","exp","log","rand",
+               "srand","qsort","bsearch","atoi","atol","atof","offsetof"}},
+        {"cpp", {"std","string","vector","map","set","unordered_map","unordered_set",
+                 "shared_ptr","unique_ptr","weak_ptr","make_shared","make_unique",
+                 "cout","cin","cerr","clog","endl","pair","tuple","optional","variant",
+                 "any","function","bind","ref","cref","array","list","deque","queue",
+                 "stack","priority_queue","multimap","multiset","bitset","valarray",
+                 "complex","regex","smatch","sregex_iterator","thread","mutex","lock_guard",
+                 "unique_lock","condition_variable","future","promise","async","packaged_task",
+                 "chrono","duration","time_point","system_clock","steady_clock",
+                 "high_resolution_clock","filesystem","path","directory_entry",
+                 "iostream","fstream","sstream","stringstream","ostream","istream",
+                 "ifstream","ofstream","numeric_limits","initializer_list",
+                 "type_info","type_index","bad_cast","bad_alloc","exception"}},
+        {"csharp", {"Console","String","Int32","Int64","Double","Single","Boolean","Byte",
+                    "Char","Decimal","DateTime","TimeSpan","Guid","Task","Task<T>",
+                    "List","Dictionary","HashSet","Queue","Stack","IEnumerable",
+                    "IEnumerator","IDisposable","IQueryable","StringBuilder",
+                    "Math","Convert","Array","Regex","File","Directory","Path",
+                    "Stream","StreamReader","StreamWriter","HttpClient",
+                    "Action","Func","Predicate","Tuple","ValueTuple","Nullable"}},
+        {"python", {"print","range","len","int","str","float","list","dict","set","tuple",
+                    "type","isinstance","enumerate","zip","map","filter","sorted","reversed",
+                    "open","super","self","__init__","__str__","__repr__","__len__",
+                    "__call__","__getitem__","__setitem__","__enter__","__exit__",
+                    "__add__","__sub__","__mul__","__truediv__","__eq__","__ne__",
+                    "__lt__","__le__","__gt__","__ge__","__hash__","__iter__",
+                    "__next__","__contains__","__bool__","__del__","__delitem__",
+                    "Any","Optional","List","Dict","Set","Tuple","Union","Callable",
+                    "TypeVar","Generic","Protocol","Final","Literal","ClassVar"}},
+        {"javascript", {"console","log","warn","error","dir","time","timeEnd",
+                        "require","module","exports","__dirname","__filename",
+                        "setTimeout","setInterval","clearTimeout","clearInterval",
+                        "fetch","JSON","stringify","parse","Math","Date","RegExp",
+                        "Error","TypeError","SyntaxError","ReferenceError",
+                        "Promise","Map","Set","WeakMap","WeakSet","Symbol",
+                        "Array","Object","String","Number","Boolean","Function",
+                        "undefined","NaN","Infinity","isNaN","parseInt","parseFloat",
+                        "encodeURI","decodeURI","encodeURIComponent","decodeURIComponent",
+                        "localStorage","sessionStorage","window","document",
+                        "Buffer","process","global","module","exports","require"}},
+        {"typescript", {"console","log","warn","error","require","module","exports",
+                        "fetch","JSON","Math","Date","RegExp","Error","Promise",
+                        "Map","Set","Array","Object","String","Number","Boolean",
+                        "undefined","NaN","any","never","unknown","string","number",
+                        "boolean","void","null","undefined","symbol","bigint",
+                        "Record","Partial","Required","Readonly","Pick","Omit",
+                        "Extract","Exclude","NonNullable","ReturnType","InstanceType",
+                        "Parameters","ConstructorParameters","Awaited",
+                        "PromiseLike","ArrayLike","Iterable","IterableIterator"}},
+        {"go", {"string","int","int8","int16","int32","int64","uint","uint8","uint16",
+                "uint32","uint64","uintptr","byte","rune","float32","float64",
+                "complex64","complex128","bool","error","nil","true","false",
+                "make","len","cap","append","copy","delete","close","new","panic",
+                "recover","print","println","fmt","Sprintf","Printf","Println",
+                "Sscanf","Scanf","Scanln","Errorf","io","Reader","Writer",
+                "Read","Write","ReadAll","Copy","Discard","NopCloser",
+                "http","Get","Post","Handle","ListenAndServe","NewServeMux",
+                "json","Marshal","Unmarshal","NewEncoder","NewDecoder",
+                "os","Open","Create","Remove","Getenv","Setenv","Getwd","Chdir",
+                "ioutil","ReadFile","WriteFile","ReadDir","TempFile","TempDir",
+                "context","Background","TODO","WithCancel","WithTimeout","WithValue"}},
+        {"rust", {"String","Vec","HashMap","HashSet","Box","Arc","Rc","Cell",
+                  "RefCell","Mutex","RwLock","Option","Some","None","Result",
+                  "Ok","Err","Iterator","IntoIterator","FromIterator",
+                  "Clone","Copy","Debug","Display","Eq","PartialEq","Ord",
+                  "PartialOrd","Hash","Default","Deref","Drop","From","Into",
+                  "AsRef","AsMut","ToOwned","Borrow","BorrowMut",
+                  "println","print","format","eprintln","eprint",
+                  "vec","format_args","assert","assert_eq","assert_ne",
+                  "panic","unreachable","unimplemented","todo","dbg",
+                  "cfg","include_str","include_bytes","file","line","column"}},
+        {"java", {"String","System","out","in","err","print","println","printf",
+                  "Integer","Double","Float","Long","Short","Byte","Boolean",
+                  "Character","Math","Object","Class","ArrayList","LinkedList",
+                  "HashMap","HashSet","TreeMap","TreeSet","LinkedHashMap",
+                  "Arrays","Collections","Comparator","Comparable","Iterator",
+                  "Iterable","List","Set","Map","Queue","Deque","Stack",
+                  "File","Path","Paths","Files","Stream","Collectors",
+                  "Optional","OptionalInt","OptionalDouble","OptionalLong",
+                  "Runnable","Callable","Thread","Executor","Executors",
+                  "Future","CompletableFuture","Supplier","Consumer",
+                  "Function","Predicate","BiFunction","UnaryOperator",
+                  "IOException","RuntimeException","NullPointerException",
+                  "IllegalArgumentException","IllegalStateException",
+                  "StringBuilder","StringBuffer","Pattern","Matcher",
+                  "Exception","Throwable","Error","Enum","Annotation"}},
+        {"kotlin", {"println","print","readln","readLine","listOf","setOf","mapOf",
+                    "mutableListOf","mutableSetOf","mutableMapOf","arrayOf",
+                    "emptyList","emptySet","emptyMap","sequence","generateSequence",
+                    "String","Int","Double","Float","Long","Short","Byte","Boolean",
+                    "Char","Any","Unit","Nothing","List","MutableList","ArrayList",
+                    "Set","MutableSet","HashSet","Map","MutableMap","HashMap",
+                    "Pair","Triple","Sequence","Iterable","MutableIterable",
+                    "Comparable","Comparator","CharSequence","Number",
+                    "Collection","MutableCollection","Iterable","Iterator",
+                    "Map","Entry","Set","List","MutableList","MutableSet",
+                    "MutableMap","HashMap","LinkedHashMap","LinkedHashSet",
+                    "Array","ByteArray","ShortArray","IntArray","LongArray",
+                    "FloatArray","DoubleArray","CharArray","BooleanArray",
+                    "run","let","apply","also","with","use","takeIf","takeUnless",
+                    "repeat","check","checkNotNull","require","requireNotNull",
+                    "TODO","error","assert"}},
+        {"swift", {"print","debugPrint","dump","type","String","Int","Double","Float",
+                   "Bool","Character","Array","Set","Dictionary","Optional",
+                   "Any","AnyObject","Codable","Encodable","Decodable",
+                   "Equatable","Hashable","Comparable","Identifiable",
+                   "CustomStringConvertible","Error","Result","never",
+                   "fatalError","precondition","preconditionFailure",
+                   "assert","assertionFailure","abs","min","max","zip",
+                   "stride","sequence","repeatElement","type","sizeof",
+                   "UIView","UIViewController","UIColor","UIImage",
+                   "NSObject","NSString","NSArray","NSDictionary",
+                   "CGFloat","CGPoint","CGSize","CGRect","CGColorSpace"}},
+        {"php", {"echo","print","die","exit","isset","empty","unset","eval",
+                 "array","list","count","sizeof","in_array","array_push",
+                 "array_pop","array_merge","array_keys","array_values",
+                 "sort","rsort","asort","ksort","usort","uasort","uksort",
+                 "implode","explode","substr","strpos","str_replace",
+                 "trim","ltrim","rtrim","strlen","strtolower","strtoupper",
+                 "ucfirst","lcfirst","ucwords","preg_match","preg_replace",
+                 "preg_split","htmlspecialchars","htmlentities",
+                 "json_encode","json_decode","serialize","unserialize",
+                 "file_get_contents","file_put_contents","fopen","fclose",
+                 "fgets","fputs","fwrite","feof","fread","fgetcsv",
+                 "date","time","strtotime","mktime","DateTime",
+                 "header","setcookie","session_start","session_destroy",
+                 "mysqli_connect","mysqli_query","PDO","Exception",
+                 "var_dump","print_r","error_reporting","ini_set",
+                 "strval","intval","floatval","boolval"}},
+        {"ruby", {"puts","print","p","pp","require","include","extend","attr_reader",
+                  "attr_writer","attr_accessor","module_function",
+                  "private","protected","public","public_send","send",
+                  "raise","fail","catch","throw","block_given?",
+                  "each","map","select","reject","reduce","inject",
+                  "filter","find","all?","any?","none?","one?",
+                  "count","size","length","empty?","include?",
+                  "sort","sort_by","group_by","partition",
+                  "new","initialize","super","yield",
+                  "nil?","true?","false?","instance_of?","is_a?",
+                  "respond_to?","method","class","superclass",
+                  "Array","Hash","String","Integer","Float","Symbol",
+                  "Range","Regexp","Proc","Lambda","Method","Binding",
+                  "File","Dir","Pathname","IO","Errno",
+                  "Time","Date","DateTime","JSON","YAML"}},
+        {"lua", {"print","type","pairs","ipairs","next","select","tonumber","tostring",
+                 "rawget","rawset","rawequal","setmetatable","getmetatable",
+                 "require","dofile","loadfile","load","pcall","xpcall",
+                 "unpack","table","concat","insert","remove","sort",
+                 "string","sub","upper","lower","rep","reverse","format","match",
+                 "gmatch","gsub","find","char","byte","len",
+                 "math","abs","ceil","floor","max","min","pow","sqrt",
+                 "sin","cos","tan","asin","acos","atan","exp","log",
+                 "random","randomseed","huge","pi",
+                 "io","open","close","read","write","lines","flush",
+                 "os","clock","time","date","difftime","execute",
+                 "coroutine","create","resume","yield","status","running",
+                 "_G","_VERSION","assert","error","collectgarbage"}},
+        {"scala", {"println","print","printf","readLine",
+                   "String","Int","Double","Float","Long","Short","Byte",
+                   "Boolean","Char","Unit","Nothing","Any","AnyVal","AnyRef",
+                   "Option","Some","None","Either","Left","Right",
+                   "Try","Success","Failure","Future","Promise",
+                   "List","Set","Map","Seq","Array","Vector","Range",
+                   "Iterator","Iterable","Traversable",
+                   "Map","flatMap","filter","fold","reduce","foreach",
+                   "collect","partition","groupBy","sortBy","sorted",
+                   "zip","unzip","mkString","toString",
+                   "Predef","Console","App","main","args",
+                   "Nil","::","Stream","LazyList"}},
+        {"perl", {"print","say","printf","sprintf","die","warn","exit",
+                  "my","our","local","state","use","require","no",
+                  "shift","unshift","push","pop","splice","split","join",
+                  "map","grep","sort","reverse","keys","values","each",
+                  "open","close","read","write","print","say","printf",
+                  "<>","chomp","chop","defined","undef","length",
+                  "substr","index","rindex","lc","uc","ucfirst","lcfirst",
+                  "sin","cos","exp","log","sqrt","int","abs","rand",
+                  "scalar","wantarray","ref","bless","tie","untie",
+                  "die","eval","warn","caller","package",
+                  "STDIN","STDOUT","STDERR","ARGV","ENV","SIG",
+                  "BEGIN","CHECK","INIT","END","UNITCHECK"}},
+        {"haskell", {"print","putStrLn","putStr","getLine","getChar","readFile",
+                     "writeFile","appendFile","interact","readLn",
+                     "map","filter","foldl","foldr","foldl1","foldr1",
+                     "zipWith","scanl","scanr","iterate","repeat","cycle",
+                     "take","drop","splitAt","takeWhile","dropWhile",
+                     "elem","notElem","lookup","find","partition",
+                     "head","tail","last","init","null","length",
+                     "reverse","and","or","any","all","sum","product",
+                     "maximum","minimum","concat","concatMap",
+                     "show","read","reads","shows","readMaybe",
+                     "fmap","pure","<*>",">>=",">>","return",
+                     "curry","uncurry","flip","id","const",
+                     "maybe","either","fromMaybe","maybeToList",
+                     "IO","Maybe","Just","Nothing","Either","Left","Right",
+                     "Ordering","EQ","LT","GT","Bool","True","False",
+                     "Char","String","Int","Integer","Float","Double",
+                     "Show","Read","Eq","Ord","Enum","Bounded",
+                     "Num","Integral","Floating","Fractional","Real",
+                     "Functor","Applicative","Monad","Foldable","Traversable",
+                     "Monoid","Semigroup","Alternative","Category"}},
+        {"bash", {"echo","printf","read","export","local","source","unset",
+                  "set","shift","trap","declare","typeset","alias","unalias",
+                  "let","test","exec","eval","exit","return","break","continue",
+                  "." ,"true","false","cd","pwd","ls","mkdir","rmdir","rm",
+                  "cp","mv","cat","less","more","head","tail","grep","sed",
+                  "awk","cut","sort","uniq","wc","find","xargs","tee","tr",
+                  "basename","dirname","realpath","readlink","which","type",
+                  "sleep","wait","kill","ps","top","df","du","mount","umount",
+                  "chmod","chown","ln","tar","gzip","gunzip","bzip2","xz",
+                  "diff","patch","comm","cmp","seq","expr","bc","calc"}},
     };
     auto it = builtins.find(lang);
     if (it == builtins.end()) return false;
@@ -962,10 +1245,12 @@ std::vector<MdSeg> md_syntax_highlight(const std::string& code, const std::strin
 
     size_t i = 0;
     while (i < code.size()) {
-        // Line comments
-        if ((lower_lang == "c" || lower_lang == "cpp" || lower_lang == "java" ||
-             lower_lang == "javascript" || lower_lang == "typescript" || lower_lang == "go" ||
-             lower_lang == "rust") &&
+        // Line comments //
+        if ((lower_lang == "c" || lower_lang == "cpp" || lower_lang == "csharp" ||
+             lower_lang == "java" || lower_lang == "javascript" || lower_lang == "typescript" ||
+             lower_lang == "go" || lower_lang == "rust" || lower_lang == "kotlin" ||
+             lower_lang == "swift" || lower_lang == "scala" || lower_lang == "php" ||
+             lower_lang == "dart") &&
             i + 1 < code.size() && code[i] == '/' && code[i+1] == '/') {
             size_t end = code.find('\n', i);
             if (end == std::string::npos) end = code.size();
@@ -974,9 +1259,10 @@ std::vector<MdSeg> md_syntax_highlight(const std::string& code, const std::strin
             continue;
         }
         // Block comments /* */
-        if ((lower_lang == "c" || lower_lang == "cpp" || lower_lang == "java" ||
-             lower_lang == "javascript" || lower_lang == "typescript" || lower_lang == "go" ||
-             lower_lang == "rust") &&
+        if ((lower_lang == "c" || lower_lang == "cpp" || lower_lang == "csharp" ||
+             lower_lang == "java" || lower_lang == "javascript" || lower_lang == "typescript" ||
+             lower_lang == "go" || lower_lang == "rust" || lower_lang == "kotlin" ||
+             lower_lang == "swift" || lower_lang == "scala" || lower_lang == "php") &&
             i + 1 < code.size() && code[i] == '/' && code[i+1] == '*') {
             size_t end = code.find("*/", i + 2);
             if (end == std::string::npos) end = code.size();
@@ -985,10 +1271,19 @@ std::vector<MdSeg> md_syntax_highlight(const std::string& code, const std::strin
             i = end;
             continue;
         }
-        // Python/Ruby/Bash comments #
+        // Lua/Haskell line comments --
+        if ((lower_lang == "lua" || lower_lang == "haskell" || lower_lang == "sql") &&
+            i + 1 < code.size() && code[i] == '-' && code[i+1] == '-') {
+            size_t end = code.find('\n', i);
+            if (end == std::string::npos) end = code.size();
+            segs.push_back({MdSeg::SYNTAX_COMMENT, code.substr(i, end - i), 0});
+            i = end;
+            continue;
+        }
+        // Python/Ruby/Bash/PHP/Perl comments #
         if ((lower_lang == "python" || lower_lang == "ruby" || lower_lang == "bash" ||
-             lower_lang == "yaml" || lower_lang == "r" || lower_lang == "perl") &&
-            code[i] == '#') {
+             lower_lang == "yaml" || lower_lang == "r" || lower_lang == "perl" ||
+             lower_lang == "php") && code[i] == '#') {
             size_t end = code.find('\n', i);
             if (end == std::string::npos) end = code.size();
             segs.push_back({MdSeg::SYNTAX_COMMENT, code.substr(i, end - i), 0});
@@ -1057,12 +1352,33 @@ std::vector<MdSeg> md_syntax_highlight(const std::string& code, const std::strin
             i = end;
             continue;
         }
-        // Words (potential keywords)
+        // Decorators/annotations (@override, @staticmethod, @api, etc.)
+        if (code[i] == '@') {
+            size_t end = i + 1;
+            while (end < code.size() && is_word_char(code[end])) end++;
+            if (end > i + 1) {
+                segs.push_back({MdSeg::SYNTAX_ATTRIBUTE, code.substr(i, end - i), 0});
+                i = end;
+                continue;
+            }
+        }
+        // Words (potential keywords, functions)
         if (is_word_char(code[i])) {
             size_t end = i;
             while (end < code.size() && is_word_char(code[end])) end++;
             std::string word = code.substr(i, end - i);
-            if (is_syntax_keyword(word, lower_lang)) {
+            // Peek ahead for function call: word followed by '(' (skip whitespace)
+            bool is_function_call = false;
+            if (!is_syntax_keyword(word, lower_lang) && !is_syntax_builtin(word, lower_lang)) {
+                size_t peek = end;
+                while (peek < code.size() && (code[peek] == ' ' || code[peek] == '\t')) peek++;
+                if (peek < code.size() && code[peek] == '(') {
+                    is_function_call = true;
+                }
+            }
+            if (is_function_call) {
+                segs.push_back({MdSeg::SYNTAX_FUNCTION, word, 0});
+            } else if (is_syntax_keyword(word, lower_lang)) {
                 segs.push_back({MdSeg::SYNTAX_KEYWORD, word, 0});
             } else if (is_syntax_builtin(word, lower_lang)) {
                 segs.push_back({MdSeg::SYNTAX_BUILTIN, word, 0});

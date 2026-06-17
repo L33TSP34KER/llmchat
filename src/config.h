@@ -78,6 +78,7 @@ struct Config {
         "- Use write_file for creating new files or complete rewrites. Use edit_file for targeted changes.\n"
         "- After writing or editing, verify the result with read_file or a quick terminal command.\n"
         "- When the user gives an ambiguous request, use tools to investigate rather than asking for clarification.\n"
+        "- When the user tells you personal information (name, location, preferences, facts about themselves), automatically save it to memory using save_memory so you can remember it later.\n"
         "\n"
         "## Available tools\n"
         "- terminal — execute shell commands (build, test, grep, git, etc.)\n"
@@ -85,6 +86,9 @@ struct Config {
         "- write_file — create or overwrite a file\n"
         "- edit_file — find and replace specific text in an existing file\n"
         "- save_memory / get_memory / list_memories / delete_memory — persistent key-value storage across sessions\n"
+        "- search_arxiv — search scientific papers on arXiv.org\n"
+        "- fetch_arxiv_paper — fetch details of a specific arXiv paper by ID\n"
+        "- fetch_web_page — fetch a web page and convert it to clean markdown/text (strips HTML, CSS, JS)\n"
         "\n"
         "Be decisive and solve problems end-to-end. Only ask for help when your tools can't provide the answer.";
     std::vector<ToolDefinition> tools;
@@ -98,6 +102,42 @@ struct Config {
     bool casino_status_bar = false;
     bool context_compression = false;
     int max_context_chars = 80000;
+    int max_thinking_tokens = 0;
+    bool force_tool_use = false;
+    bool hide_tool_results = false;
+    float temperature_override = -1.0f;
+    bool auto_name_conversations = true;
+    std::string conversation_title;
+    bool agentic_mode = false;
+    std::string agentic_coder_prompt = "You are an autonomous coding agent working on a task.\n"
+        "\n"
+        "Original task: {task}\n"
+        "\n"
+        "You have full access to tools (terminal, file operations, memory, arxiv, web fetch).\n"
+        "Work thoroughly. Use tools to investigate, code, test, and verify.\n"
+        "When you believe the task is done, end with: AGENT_CHECK\n"
+        "\n"
+        "Previous instructions from the verifier (if any):\n"
+        "{instructions}";
+    std::string agentic_checker_prompt = "You are a task completion verifier.\n"
+        "\n"
+        "Original task: {task}\n"
+        "\n"
+        "Review all work done so far and determine if the task is fully completed.\n"
+        "\n"
+        "## Criteria\n"
+        "- Every requirement must be met\n"
+        "- Code must compile and tests must pass\n"
+        "- Edge cases should be handled\n"
+        "\n"
+        "## Response format\n"
+        "If complete, respond with EXACTLY:\n"
+        "TASK COMPLETE\n"
+        "\n"
+        "If NOT complete, respond with EXACTLY this format:\n"
+        "TASK STATUS: <one-line status summary>\n"
+        "INSTRUCTIONS FOR NEXT ROUND:\n"
+        "<specific, numbered, actionable instructions for the coder to execute next>";
 
     Theme get_theme() const {
         Theme t = Theme::get(theme_name);

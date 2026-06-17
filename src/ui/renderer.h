@@ -22,6 +22,8 @@ public:
     void draw_status(bool is_processing, bool use_casino_status, const std::string& casino_frame,
                      const std::string& model_name, const std::string& status_text,
                      int anim_frame = 0, const std::string& thinking_phrase = "");
+
+    void draw_topbar(WINDOW* top_win, const std::string& title, int thinking_tokens, int anim_frame);
     int compute_total_box_lines(Conversation* conv, int max_x);
 
     static void ncurses_color_to_rgb(int c, float& r, float& g, float& b);

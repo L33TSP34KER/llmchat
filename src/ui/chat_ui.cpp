@@ -68,6 +68,10 @@ void ChatUI::init_ncurses() {
     nodelay(stdscr, TRUE);
     printf("\033[?2004h");  // enable bracketed paste
 
+    // Enable mouse tracking (SGR mode for wider coordinates)
+    printf("\033[?1000h\033[?1002h\033[?1006h");
+    mousemask(BUTTON1_CLICKED | BUTTON1_PRESSED | REPORT_MOUSE_POSITION, NULL);
+
     getmaxyx(stdscr, term_height_, term_width_);
     create_windows();
 
@@ -79,6 +83,7 @@ void ChatUI::init_ncurses() {
 
 void ChatUI::cleanup_ncurses() {
     printf("\033[?1000l\033[?1002l\033[?1003l\033[?1006l\033[?2004l");
+    mousemask(0, NULL);
     destroy_windows();
     endwin();
 }
@@ -86,12 +91,13 @@ void ChatUI::cleanup_ncurses() {
 void ChatUI::create_windows() {
     getmaxyx(stdscr, term_height_, term_width_);
 
-    chat_height_ = term_height_ - input_height_ - status_height_;
+    chat_height_ = term_height_ - input_height_ - status_height_ - 1;
     if (chat_height_ < 1) chat_height_ = 1;
 
-    chat_win_ = newwin(chat_height_, term_width_, 0, 0);
-    input_win_ = newwin(input_height_, term_width_, chat_height_, 0);
-    status_win_ = newwin(status_height_, term_width_, chat_height_ + input_height_, 0);
+    top_win_ = newwin(1, term_width_, 0, 0);
+    chat_win_ = newwin(chat_height_, term_width_, 1, 0);
+    input_win_ = newwin(input_height_, term_width_, 1 + chat_height_, 0);
+    status_win_ = newwin(status_height_, term_width_, 1 + chat_height_ + input_height_, 0);
 
     scrollok(chat_win_, TRUE);
     keypad(chat_win_, TRUE);
@@ -99,10 +105,12 @@ void ChatUI::create_windows() {
 }
 
 void ChatUI::destroy_windows() {
+    if (thinking_popup_win_) { delwin(thinking_popup_win_); thinking_popup_win_ = nullptr; }
+    if (top_win_) delwin(top_win_);
     if (chat_win_) delwin(chat_win_);
     if (input_win_) delwin(input_win_);
     if (status_win_) delwin(status_win_);
-    chat_win_ = input_win_ = status_win_ = nullptr;
+    top_win_ = chat_win_ = input_win_ = status_win_ = nullptr;
 }
 
 void ChatUI::set_status_text(const std::string& text) {
@@ -149,6 +157,86 @@ void ChatUI::draw_all() {
         }
         renderer_.draw_input(input_buf_, cursor_pos_, state_.processing, animation_.get_color_index(), anim_frame_, non_system);
     }
+    // Calculate thinking button position for popup + mouse tracking
+    {
+        std::string btn_label;
+        switch (config_->max_thinking_tokens) {
+            case 0:    btn_label = "\xf0\x9f\xa7\xa0 None"; break;
+            case 128:  btn_label = "\xf0\x9f\xa7\xa0 Minimal"; break;
+            case 250:  btn_label = "\xf0\x9f\xa7\xa0 Medium"; break;
+            case 512:  btn_label = "\xf0\x9f\xa7\xa0 Normal"; break;
+            case 1024: btn_label = "\xf0\x9f\xa7\xa0 High"; break;
+            default:   btn_label = "\xf0\x9f\xa7\xa0 GODMOD"; break;
+        }
+        thinking_button_x_ = term_width_ - (int)str_width(btn_label) - 5;
+    }
+
+    // Draw top bar
+    renderer_.draw_topbar(top_win_, state_.conversation_title, config_->max_thinking_tokens, anim_frame_);
+
+    // Create/destroy thinking popup window
+    if (thinking_popup_open_ && !thinking_popup_win_) {
+        static const char* popup_labels[] = {
+            "None", "Minimal (128)", "Medium (250)",
+            "Normal (512)", "High (1024)", "GODMOD (\xe2\x88\x9e)"
+        };
+        int num_options = 6;
+        int max_w = 0;
+        for (int i = 0; i < num_options; i++) {
+            int w = str_width(std::string("  ") + popup_labels[i]);
+            if (w > max_w) max_w = w;
+        }
+        int popup_w = max_w + 6;
+        int popup_h = num_options + 2;
+        int btn_right = term_width_ - 3;
+        int popup_x = btn_right - popup_w;
+        if (popup_x < 2) popup_x = 2;
+        if (popup_x + popup_w > term_width_) popup_x = term_width_ - popup_w - 2;
+        thinking_popup_win_ = newwin(popup_h, popup_w, 1, popup_x);
+    } else if (!thinking_popup_open_ && thinking_popup_win_) {
+        delwin(thinking_popup_win_);
+        thinking_popup_win_ = nullptr;
+    }
+
+    // Draw thinking popup if open
+    if (thinking_popup_open_ && thinking_popup_win_) {
+        static const char* popup_labels[] = {
+            "None",
+            "Minimal (128)",
+            "Medium (250)",
+            "Normal (512)",
+            "High (1024)",
+            "GODMOD (\xe2\x88\x9e)"
+        };
+        static const int popup_values[] = {0, 128, 250, 512, 1024, 99999};
+        int num_options = 6;
+
+        // Find current selection index
+        int cur = 0;
+        for (int i = 0; i < num_options; i++) {
+            if (config_->max_thinking_tokens == popup_values[i]) {
+                cur = i;
+                break;
+            }
+        }
+
+        werase(thinking_popup_win_);
+        box(thinking_popup_win_, 0, 0);
+        int content_w = getmaxx(thinking_popup_win_) - 2;
+        for (int i = 0; i < num_options; i++) {
+            int wy = i + 1;
+            if (i == cur) wattron(thinking_popup_win_, A_REVERSE);
+            wmove(thinking_popup_win_, wy, 1);
+            wclrtoeol(thinking_popup_win_);
+            std::string line = std::string("  ") + popup_labels[i];
+            int cells = str_width(line);
+            if (cells < content_w) line.append(content_w - cells, ' ');
+            waddstr(thinking_popup_win_, line.c_str());
+            if (i == cur) wattroff(thinking_popup_win_, A_REVERSE);
+        }
+        wnoutrefresh(thinking_popup_win_);
+    }
+
     renderer_.draw_status(state_.processing, use_casino_status_, casino_frame_,
                           state_.model_name, state_.status_text,
                           anim_frame_, state_.thinking_phrase);
@@ -182,6 +270,81 @@ void ChatUI::handle_input(int ch) {
     }
     if (paste_mode_) {
         paste_buf_ += (char)ch;
+        return;
+    }
+
+    if (ch == KEY_MOUSE) {
+        MEVENT event;
+        if (getmouse(&event) == OK) {
+            // Calculate thinking button position (right side of top bar)
+            std::string btn_label;
+            switch (config_->max_thinking_tokens) {
+                case 0:    btn_label = "\xf0\x9f\xa7\xa0 None"; break;
+                case 128:  btn_label = "\xf0\x9f\xa7\xa0 Minimal"; break;
+                case 250:  btn_label = "\xf0\x9f\xa7\xa0 Medium"; break;
+                case 512:  btn_label = "\xf0\x9f\xa7\xa0 Normal"; break;
+                case 1024: btn_label = "\xf0\x9f\xa7\xa0 High"; break;
+                default:   btn_label = "\xf0\x9f\xa7\xa0 GODMOD"; break;
+            }
+            int btn_x = term_width_ - (int)str_width(btn_label) - 5;
+            int btn_w = (int)str_width(btn_label) + 3;
+
+            if (event.bstate & (BUTTON1_CLICKED | BUTTON1_PRESSED)) {
+                // Check if click on thinking button (row 0)
+                if (event.y == 0 && event.x >= btn_x && event.x < btn_x + btn_w) {
+                    thinking_popup_open_ = !thinking_popup_open_;
+                    needs_redraw_ = true;
+                    return;
+                }
+
+                // Check if click on popup option
+                if (thinking_popup_open_) {
+                    static const char* popup_labels_calc[] = {
+                        "None", "Minimal (128)", "Medium (250)",
+                        "Normal (512)", "High (1024)", "GODMOD (\xe2\x88\x9e)"
+                    };
+                    static const int popup_values[] = {0, 128, 250, 512, 1024, 99999};
+                    int num_options = 6;
+                    int max_w = 0;
+                    for (int i = 0; i < num_options; i++) {
+                        int w = str_width(std::string("  ") + popup_labels_calc[i]);
+                        if (w > max_w) max_w = w;
+                    }
+                    int popup_w = max_w + 6;
+                    int btn_right = term_width_ - 3;
+                    int popup_x = btn_right - popup_w;
+                    if (popup_x < 2) popup_x = 2;
+                    if (popup_x + popup_w > term_width_) popup_x = term_width_ - popup_w - 2;
+
+                    // options start at screen row 2 (row 1 = top border, row 2+ = options)
+                    // content area is from column 1 to popup_w - 2
+                    int option_y = event.y - 2;
+                    int option_x = event.x - popup_x;
+
+                    if (option_y >= 0 && option_y < num_options && option_x >= 1 && option_x < popup_w - 1) {
+                        config_->max_thinking_tokens = popup_values[option_y];
+                        thinking_popup_open_ = false;
+                        config_->save();
+                        needs_redraw_ = true;
+                        return;
+                    }
+
+                    // Click outside popup (anywhere not on the popup window area) → close it
+                    int popup_h = num_options + 2;
+                    if (event.y >= 1 && event.y < 1 + popup_h &&
+                        event.x >= popup_x && event.x < popup_x + popup_w) {
+                        // Clicked on popup border or outside content area → close
+                        thinking_popup_open_ = false;
+                        needs_redraw_ = true;
+                        return;
+                    }
+                    // Click is outside popup entirely → close
+                    thinking_popup_open_ = false;
+                    needs_redraw_ = true;
+                    return;
+                }
+            }
+        }
         return;
     }
 

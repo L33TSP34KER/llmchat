@@ -116,11 +116,17 @@ static void write_sample_config(const std::string& path) {
         "- Use write_file for new files or rewrites. Use edit_file for targeted changes.\n"
         "- After writing or editing, verify with read_file or a quick terminal command.\n"
         "- When ambiguous, use tools to investigate before asking.\n"
+        "- When the user tells you personal information (name, location, preferences, facts about themselves), automatically save it to memory using save_memory so you can remember it later.\n"
         "\n"
-        "## Tools\n"
+        "## Local tools\n"
         "- terminal — shell commands\n"
         "- read_file / write_file / edit_file — file operations\n"
         "- save_memory / get_memory / list_memories / delete_memory — persistence\n"
+        "\n"
+        "## Web tools\n"
+        "- search_arxiv — search scientific papers on arXiv.org\n"
+        "- fetch_arxiv_paper — fetch details of a specific arXiv paper by ID\n"
+        "- fetch_web_page — fetch a web page and convert it to clean markdown/text (strips HTML, CSS, JS)\n"
         "\n"
         "Be decisive and solve problems end-to-end.";
     j["theme"] = "default";
@@ -131,6 +137,14 @@ static void write_sample_config(const std::string& path) {
     j["casino_status_bar"] = false;
     j["context_compression"] = false;
     j["max_context_chars"] = 80000;
+    j["max_thinking_tokens"] = 0;
+    j["force_tool_use"] = false;
+    j["hide_tool_results"] = false;
+    j["temperature_override"] = -1.0;
+    j["auto_name_conversations"] = true;
+    j["agentic_mode"] = false;
+    j["agentic_coder_prompt"] = "";
+    j["agentic_checker_prompt"] = "";
 
     json tools_arr = json::array();
 
@@ -181,6 +195,26 @@ static void write_sample_config(const std::string& path) {
     read_schema["properties"]["path"] = {{"type", "string"}, {"description", "File path to read"}};
     read_schema["required"] = json::array({"path"});
     tools_arr.push_back(make_tool("read_file", "Read the contents of a file", read_schema));
+
+    json arxiv_search_schema;
+    arxiv_search_schema["type"] = "object";
+    arxiv_search_schema["properties"]["query"] = {{"type", "string"}, {"description", "Search query for arxiv"}};
+    arxiv_search_schema["properties"]["max_results"] = {{"type", "integer"}, {"description", "Maximum number of results (default 5)"}};
+    arxiv_search_schema["required"] = json::array({"query"});
+    tools_arr.push_back(make_tool("search_arxiv", "Search scientific papers on arXiv.org", arxiv_search_schema));
+
+    json arxiv_fetch_schema;
+    arxiv_fetch_schema["type"] = "object";
+    arxiv_fetch_schema["properties"]["id"] = {{"type", "string"}, {"description", "arXiv paper ID (e.g. 2301.12345)"}};
+    arxiv_fetch_schema["required"] = json::array({"id"});
+    tools_arr.push_back(make_tool("fetch_arxiv_paper", "Fetch details of a specific arXiv paper by ID", arxiv_fetch_schema));
+
+    json webfetch_schema;
+    webfetch_schema["type"] = "object";
+    webfetch_schema["properties"]["url"] = {{"type", "string"}, {"description", "URL to fetch"}};
+    webfetch_schema["properties"]["format"] = {{"type", "string"}, {"enum", json::array({"markdown", "text"})}, {"description", "Output format (markdown or text, default: markdown)"}};
+    webfetch_schema["required"] = json::array({"url"});
+    tools_arr.push_back(make_tool("fetch_web_page", "Fetch a web page and convert it to clean markdown/text (strips HTML, CSS, JS)", webfetch_schema));
 
     j["tools"] = tools_arr;
     j["mcp_servers"] = json::array();
@@ -233,6 +267,15 @@ Config Config::load() {
         if (j.contains("casino_status_bar")) cfg.casino_status_bar = j["casino_status_bar"];
         if (j.contains("context_compression")) cfg.context_compression = j["context_compression"];
         if (j.contains("max_context_chars")) cfg.max_context_chars = j["max_context_chars"];
+        if (j.contains("max_thinking_tokens")) cfg.max_thinking_tokens = j["max_thinking_tokens"];
+        if (j.contains("force_tool_use")) cfg.force_tool_use = j["force_tool_use"];
+        if (j.contains("hide_tool_results")) cfg.hide_tool_results = j["hide_tool_results"];
+        if (j.contains("temperature_override")) cfg.temperature_override = j["temperature_override"];
+        if (j.contains("auto_name_conversations")) cfg.auto_name_conversations = j["auto_name_conversations"];
+        if (j.contains("agentic_mode")) cfg.agentic_mode = j["agentic_mode"];
+        if (j.contains("agentic_coder_prompt")) cfg.agentic_coder_prompt = j["agentic_coder_prompt"];
+        if (j.contains("agentic_checker_prompt")) cfg.agentic_checker_prompt = j["agentic_checker_prompt"];
+        if (j.contains("conversation_title")) cfg.conversation_title = j["conversation_title"];
 
         if (j.contains("tools")) {
             for (auto& t : j["tools"]) {
@@ -288,6 +331,15 @@ void Config::save() {
     j["casino_status_bar"] = casino_status_bar;
     j["context_compression"] = context_compression;
     j["max_context_chars"] = max_context_chars;
+    j["max_thinking_tokens"] = max_thinking_tokens;
+    j["force_tool_use"] = force_tool_use;
+    j["hide_tool_results"] = hide_tool_results;
+    j["temperature_override"] = temperature_override;
+    j["auto_name_conversations"] = auto_name_conversations;
+    j["conversation_title"] = conversation_title;
+    j["agentic_mode"] = agentic_mode;
+    j["agentic_coder_prompt"] = agentic_coder_prompt;
+    j["agentic_checker_prompt"] = agentic_checker_prompt;
 
     json tools_arr = json::array();
     for (auto& t : tools) {

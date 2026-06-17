@@ -18,6 +18,7 @@ struct UIState {
     std::string model_name;
     std::string status_text;
     std::string thinking_phrase;
+    std::string conversation_title;
 };
 
 class ChatUI {
@@ -59,9 +60,15 @@ private:
     Renderer renderer_;
     ColorAnimation animation_;
 
+    WINDOW* top_win_ = nullptr;
     WINDOW* chat_win_ = nullptr;
     WINDOW* input_win_ = nullptr;
     WINDOW* status_win_ = nullptr;
+
+    // Thinking popup state
+    int thinking_button_x_ = 0;
+    bool thinking_popup_open_ = false;
+    WINDOW* thinking_popup_win_ = nullptr;
 
     int chat_height_ = 0;
     int input_height_ = 2;

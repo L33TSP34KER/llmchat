@@ -2,6 +2,7 @@
 #include "tool_exec.h"
 #include "http_client.h"
 #include "mcp/manager.h"
+#include "features/feature_registry.h"
 #include <thread>
 #include <iostream>
 
@@ -195,7 +196,9 @@ void LlmClient::worker_loop() {
         }
 
         processing_ = true;
-        if (deep_search_) {
+        if (agentic_) {
+            process_message_agentic(qm.content);
+        } else if (deep_search_) {
             process_message_deep_search(qm.content);
         } else {
             process_message(qm.content, qm.skill_override);
@@ -203,6 +206,7 @@ void LlmClient::worker_loop() {
         processing_ = false;
         cancel_ = false;
         deep_search_ = false;
+        agentic_ = false;
     }
 }
 
@@ -328,12 +332,16 @@ void LlmClient::process_message(const std::string& content, const std::string& s
                 }
 
                 std::string result;
-                if (tool_exec::is_mcp_tool(ptc.name)) {
+                if (features_ && features_->is_handled_tool(ptc.name)) {
+                    result = features_->execute_tool(ptc.name, ptc.arguments);
+                } else if (tool_exec::is_mcp_tool(ptc.name)) {
                     result = mcp_manager_
                         ? mcp_manager_->execute_tool(ptc.name, ptc.arguments)
                         : "Error: MCP manager not available";
-                } else {
+                } else if (!tool_def->command.empty()) {
                     result = tool_exec::execute_shell(*tool_def, ptc.arguments);
+                } else {
+                    result = "Error: No handler for tool '" + ptc.name + "'";
                 }
 
                 Message tool_msg;
@@ -343,7 +351,7 @@ void LlmClient::process_message(const std::string& content, const std::string& s
                 tool_msg.tool_name = ptc.name;
                 messages_.push_back(tool_msg);
 
-                if (stream_cb_) {
+                if (!config_->hide_tool_results && stream_cb_) {
                     StreamEvent se;
                     se.type = StreamEvent::TOKEN;
                     se.text = "\n[Tool " + ptc.name + " returned: " + result.substr(0, 200) + "]\n";
@@ -367,6 +375,60 @@ void LlmClient::process_message(const std::string& content, const std::string& s
     if (!cancel_) maybe_compress();
 
     if (stream_cb_) stream_cb_({StreamEvent::DONE, "", json(), ""});
+
+    message_count_++;
+    if (!cancel_ && config_->auto_name_conversations && config_->conversation_title.empty()
+        && message_count_ == 5) {
+        maybe_generate_title();
+    }
+}
+
+void LlmClient::maybe_generate_title() {
+    if (!stream_cb_ || !title_cb_) return;
+    std::string prompt = "Generate a very short title (max 5 words) for this conversation. "
+                         "Reply with ONLY the title, no quotes, no punctuation:\n\n";
+    for (auto& m : messages_) {
+        if (m.role == "system") continue;
+        prompt += "[" + m.role + "]\n" + m.content.substr(0, 200) + "\n\n";
+        if (prompt.size() > 3000) break;
+    }
+    prompt += "Title:";
+
+    json j;
+    j["model"] = config_->model;
+    j["stream"] = false;
+    json msgs = json::array();
+    json sys; sys["role"] = "system"; sys["content"] = "You generate short conversation titles.";
+    msgs.push_back(sys);
+    json usr; usr["role"] = "user"; usr["content"] = prompt;
+    msgs.push_back(usr);
+    j["messages"] = msgs;
+
+    HttpClient http;
+    http.set_url(config_->api_endpoint);
+    http.set_method("POST");
+    http.set_header("Content-Type", "application/json");
+    if (!config_->api_key.empty())
+        http.set_header("Authorization", "Bearer " + config_->api_key);
+    http.set_body(j.dump());
+
+    HttpResponse resp = http.perform();
+    if (resp.status_code == 200) {
+        try {
+            auto rj = json::parse(resp.body);
+            if (rj.contains("choices") && !rj["choices"].empty()
+                && rj["choices"][0].contains("message")
+                && rj["choices"][0]["message"].contains("content")
+                && !rj["choices"][0]["message"]["content"].is_null()) {
+                std::string title = rj["choices"][0]["message"]["content"].get<std::string>();
+                while (!title.empty() && title.back() == '.') title.pop_back();
+                while (!title.empty() && title.front() == '"') title.erase(0, 1);
+                while (!title.empty() && title.back() == '"') title.pop_back();
+                config_->conversation_title = title;
+                title_cb_(title);
+            }
+        } catch (...) {}
+    }
 }
 
 void LlmClient::process_message_deep_search(const std::string& content) {
@@ -501,29 +563,34 @@ void LlmClient::process_message_deep_search(const std::string& content) {
                     tool_msg.tool_name = ptc.name;
                     messages_.push_back(tool_msg);
                     if (stream_cb_) stream_cb_({StreamEvent::ERROR, "Unknown tool: " + ptc.name, json(), ""});
+                    continue;
+                }
+
+                std::string result;
+                if (features_ && features_->is_handled_tool(ptc.name)) {
+                    result = features_->execute_tool(ptc.name, ptc.arguments);
+                } else if (tool_exec::is_mcp_tool(ptc.name)) {
+                    result = mcp_manager_
+                        ? mcp_manager_->execute_tool(ptc.name, ptc.arguments)
+                        : "Error: MCP manager not available";
+                } else if (!tool_def->command.empty()) {
+                    result = tool_exec::execute_shell(*tool_def, ptc.arguments);
                 } else {
-                    std::string result;
-                    if (tool_exec::is_mcp_tool(ptc.name)) {
-                        result = mcp_manager_
-                            ? mcp_manager_->execute_tool(ptc.name, ptc.arguments)
-                            : "Error: MCP manager not available";
-                    } else {
-                        result = tool_exec::execute_shell(*tool_def, ptc.arguments);
-                    }
+                    result = "Error: No handler for tool '" + ptc.name + "'";
+                }
 
-                    Message tool_msg;
-                    tool_msg.role = "tool";
-                    tool_msg.content = result;
-                    tool_msg.tool_call_id = "call_" + std::to_string(messages_.size());
-                    tool_msg.tool_name = ptc.name;
-                    messages_.push_back(tool_msg);
+                Message tool_msg;
+                tool_msg.role = "tool";
+                tool_msg.content = result;
+                tool_msg.tool_call_id = "call_" + std::to_string(messages_.size());
+                tool_msg.tool_name = ptc.name;
+                messages_.push_back(tool_msg);
 
-                    if (stream_cb_) {
-                        StreamEvent se;
-                        se.type = StreamEvent::TOKEN;
-                        se.text = "\n[Tool " + ptc.name + " returned: " + result.substr(0, 200) + "]\n";
-                        stream_cb_(se);
-                    }
+                if (!config_->hide_tool_results && stream_cb_) {
+                    StreamEvent se;
+                    se.type = StreamEvent::TOKEN;
+                    se.text = "\n[Tool " + ptc.name + " returned: " + result.substr(0, 200) + "]\n";
+                    stream_cb_(se);
                 }
             }
 
@@ -629,6 +696,257 @@ void LlmClient::process_message_deep_search(const std::string& content) {
     if (stream_cb_) stream_cb_({StreamEvent::DONE, "", json(), ""});
 }
 
+void LlmClient::process_message_agentic(const std::string& content) {
+    Message user;
+    user.role = "user";
+    user.content = content;
+    messages_.push_back(user);
+
+    int max_rounds = 10;
+    int round = 0;
+    std::string last_instructions;
+
+    while (round < max_rounds && !cancel_) {
+        round++;
+
+        // === CODER PHASE ===
+        if (stream_cb_) {
+            StreamEvent se;
+            se.type = StreamEvent::TOKEN;
+            se.text = "\n--- Agent Round " + std::to_string(round) + ": Working ---\n";
+            stream_cb_(se);
+        }
+
+        std::string coder_prompt = config_->agentic_coder_prompt;
+        auto replace_placeholders = [&](std::string tmpl) -> std::string {
+            size_t pos;
+            while ((pos = tmpl.find("{task}")) != std::string::npos)
+                tmpl.replace(pos, 6, content);
+            while ((pos = tmpl.find("{instructions}")) != std::string::npos)
+                tmpl.replace(pos, 14, last_instructions.empty() ? "(none yet)" : last_instructions);
+            return tmpl;
+        };
+        coder_prompt = replace_placeholders(coder_prompt);
+
+        std::vector<Message> coder_history;
+        Message coder_sys;
+        coder_sys.role = "system";
+        coder_sys.content = coder_prompt;
+        coder_history.push_back(coder_sys);
+        for (auto& m : messages_) coder_history.push_back(m);
+
+        auto coder_callback = [&](const StreamEvent& ev) {
+            switch (ev.type) {
+                case StreamEvent::TOKEN:
+                    if (stream_cb_) stream_cb_(ev);
+                    break;
+                case StreamEvent::REASONING:
+                    if (stream_cb_) stream_cb_(ev);
+                    break;
+                case StreamEvent::TOOL_CALL:
+                    if (stream_cb_) stream_cb_(ev);
+                    break;
+                case StreamEvent::DONE:
+                    if (stream_cb_) { StreamEvent c; c.type = StreamEvent::CLEAR_STREAMING; stream_cb_(c); }
+                    break;
+                case StreamEvent::ERROR:
+                case StreamEvent::COMPRESS:
+                    if (stream_cb_) stream_cb_(ev);
+                    break;
+                default: break;
+            }
+        };
+
+        bool include_tools = config_->include_tools_in_context && !config_->tools.empty();
+
+        std::string accumulated;
+        std::vector<ToolCall> pending_tools;
+        bool got_tool = false;
+
+        // Send coder request
+        {
+            std::string payload = build_payload(coder_history, include_tools);
+            provider_->set_stream_callback(coder_callback);
+            bool ok = provider_->send_request(payload);
+            if (!ok || cancel_) {
+                if (stream_cb_) stream_cb_({StreamEvent::DONE, "", json(), ""});
+                return;
+            }
+        }
+
+        if (stream_cb_) { StreamEvent c; c.type = StreamEvent::CLEAR_STREAMING; stream_cb_(c); }
+
+        // Handle tool calls during coder phase
+        int tool_turns = 0;
+        while (got_tool && tool_turns < 5 && !cancel_) {
+            tool_turns++;
+            got_tool = false;
+
+            Message asst_tool;
+            asst_tool.role = "assistant";
+            asst_tool.content = accumulated;
+            json tc_arr = json::array();
+            int ci = 0;
+            for (auto& ptc : pending_tools) {
+                json tc_entry;
+                tc_entry["id"] = "call_" + std::to_string(messages_.size()) + "_" + std::to_string(ci++);
+                tc_entry["type"] = "function";
+                tc_entry["function"]["name"] = ptc.name;
+                tc_entry["function"]["arguments"] = ptc.arguments;
+                tc_arr.push_back(tc_entry);
+            }
+            asst_tool.tool_calls = tc_arr;
+            messages_.push_back(asst_tool);
+
+            for (auto& ptc : pending_tools) {
+                ToolDefinition* tool_def = nullptr;
+                for (auto& t : config_->tools) {
+                    if (t.name == ptc.name) { tool_def = &t; break; }
+                }
+
+                std::string result;
+                if (!tool_def) {
+                    result = "Error: Unknown tool '" + ptc.name + "'";
+                } else if (features_ && features_->is_handled_tool(ptc.name)) {
+                    result = features_->execute_tool(ptc.name, ptc.arguments);
+                } else if (ptc.name.size() >= 4 && ptc.name.substr(0, 4) == "mcp_") {
+                    result = mcp_manager_
+                        ? mcp_manager_->execute_tool(ptc.name, ptc.arguments)
+                        : "Error: MCP manager not available";
+                } else if (!tool_def->command.empty()) {
+                    result = tool_exec::execute_shell(*tool_def, ptc.arguments);
+                } else {
+                    result = "Error: No handler for tool '" + ptc.name + "'";
+                }
+
+                Message tool_msg;
+                tool_msg.role = "tool";
+                tool_msg.content = result;
+                tool_msg.tool_call_id = "call_" + std::to_string(messages_.size());
+                tool_msg.tool_name = ptc.name;
+                messages_.push_back(tool_msg);
+            }
+
+            accumulated.clear();
+            coder_history.clear();
+            coder_history.push_back(coder_sys);
+            for (auto& m : messages_) coder_history.push_back(m);
+            std::string payload = build_payload(coder_history, include_tools);
+
+            provider_->set_stream_callback(coder_callback);
+            bool ok = provider_->send_request(payload);
+            if (!ok || cancel_) {
+                if (stream_cb_) stream_cb_({StreamEvent::DONE, "", json(), ""});
+                return;
+            }
+            if (stream_cb_) { StreamEvent c; c.type = StreamEvent::CLEAR_STREAMING; stream_cb_(c); }
+        }
+
+        // Add coder's final response to messages
+        if (!accumulated.empty()) {
+            Message asst;
+            asst.role = "assistant";
+            asst.content = accumulated;
+            messages_.push_back(asst);
+        }
+
+        bool needs_check = round > 1 || accumulated.find("AGENT_CHECK") != std::string::npos;
+
+        // === CHECKER PHASE ===
+        if (needs_check && !cancel_) {
+            if (stream_cb_) {
+                StreamEvent se;
+                se.type = StreamEvent::TOKEN;
+                se.text = "\n--- Agent Round " + std::to_string(round) + ": Verifying ---\n";
+                stream_cb_(se);
+            }
+
+            std::string checker_prompt = config_->agentic_checker_prompt;
+            {
+                size_t pos;
+                while ((pos = checker_prompt.find("{task}")) != std::string::npos)
+                    checker_prompt.replace(pos, 6, content);
+            }
+
+            std::vector<Message> checker_history;
+            Message checker_sys;
+            checker_sys.role = "system";
+            checker_sys.content = checker_prompt;
+            checker_history.push_back(checker_sys);
+            for (auto& m : messages_) checker_history.push_back(m);
+
+            std::string checker_result;
+            provider_->set_stream_callback([&](const StreamEvent& ev) {
+                if (ev.type == StreamEvent::TOKEN) {
+                    checker_result += ev.text;
+                    if (stream_cb_) stream_cb_(ev);
+                } else if (ev.type == StreamEvent::DONE) {
+                    if (stream_cb_) { StreamEvent c; c.type = StreamEvent::CLEAR_STREAMING; stream_cb_(c); }
+                } else if (ev.type == StreamEvent::ERROR) {
+                    if (stream_cb_) stream_cb_(ev);
+                }
+            });
+
+            std::string checker_payload = build_payload(checker_history, false);
+            bool ok = provider_->send_request(checker_payload);
+            if (!ok || cancel_) {
+                if (stream_cb_) stream_cb_({StreamEvent::DONE, "", json(), ""});
+                return;
+            }
+
+            if (stream_cb_) { StreamEvent c; c.type = StreamEvent::CLEAR_STREAMING; stream_cb_(c); }
+
+            // Check if task is complete
+            std::string upper;
+            for (auto& c : checker_result) upper += std::toupper(c);
+            if (upper.find("TASK COMPLETE") != std::string::npos) {
+                if (stream_cb_) {
+                    StreamEvent se;
+                    se.type = StreamEvent::TOKEN;
+                    se.text = "\n--- Task Complete! ---\n";
+                    stream_cb_(se);
+                }
+                break;
+            }
+
+            // Extract instructions for next coder round
+            std::string instr_marker = "INSTRUCTIONS FOR NEXT ROUND:";
+            size_t instr_pos = checker_result.find(instr_marker);
+            if (instr_pos != std::string::npos) {
+                last_instructions = checker_result.substr(instr_pos + instr_marker.size());
+                while (!last_instructions.empty() && last_instructions.front() == '\n')
+                    last_instructions.erase(0, 1);
+            } else {
+                last_instructions = checker_result;
+            }
+
+            // Add checker feedback as user message for context
+            Message feedback;
+            feedback.role = "user";
+            feedback.content = "Verifier review:\n" + checker_result;
+            messages_.push_back(feedback);
+
+            if (stream_cb_) {
+                StreamEvent se;
+                se.type = StreamEvent::TOKEN;
+                se.text = "\n--- Continuing with instructions ---\n";
+                stream_cb_(se);
+            }
+        }
+    }
+
+    if (round >= max_rounds && stream_cb_) {
+        StreamEvent se;
+        se.type = StreamEvent::TOKEN;
+        se.text = "\n--- Max rounds reached ---\n";
+        stream_cb_(se);
+    }
+
+    if (stream_cb_) { StreamEvent c; c.type = StreamEvent::CLEAR_STREAMING; stream_cb_(c); }
+    if (!cancel_) maybe_compress();
+    if (stream_cb_) stream_cb_({StreamEvent::DONE, "", json(), ""});
+}
+
 std::string LlmClient::build_payload(const std::vector<Message>& history, bool include_tools) {
     json j;
     j["model"] = config_->model;
@@ -638,9 +956,20 @@ std::string LlmClient::build_payload(const std::vector<Message>& history, bool i
     for (auto& m : history) msgs.push_back(m.to_json());
     j["messages"] = msgs;
 
-    if (include_tools) {
-        j["tools"] = config_->get_tools_json();
-    }
+        if (include_tools) {
+            j["tools"] = config_->get_tools_json();
+            if (config_->force_tool_use) {
+                j["tool_choice"] = "required";
+            }
+        }
 
-    return j.dump();
+        if (config_->temperature_override >= 0.0f) {
+            j["temperature"] = config_->temperature_override;
+        }
+
+        if (config_->max_thinking_tokens > 0) {
+            j["thinking"] = {{"budget_tokens", config_->max_thinking_tokens}};
+        }
+
+        return j.dump();
 }

@@ -25,6 +25,24 @@ add_executable(llmchat
     src/ui/animation.cpp
     src/ui/text_util.cpp
     src/ui/markdown.cpp
+    src/commands/command_registry.cpp
+    src/commands/clear_command.cpp
+    src/commands/copy_command.cpp
+    src/commands/deepsearch_command.cpp
+    src/commands/export_command.cpp
+    src/commands/help_command.cpp
+    src/commands/model_command.cpp
+    src/commands/skill_command.cpp
+    src/commands/stats_command.cpp
+    src/commands/search_command.cpp
+    src/commands/temp_command.cpp
+    src/features/feature_registry.cpp
+    src/features/deepsearch_feature.cpp
+    src/features/fileio_feature.cpp
+    src/features/memory_feature.cpp
+    src/features/terminal_feature.cpp
+    src/features/arxiv_feature.cpp
+    src/features/webfetch_feature.cpp
 )
 
 target_include_directories(llmchat PRIVATE
@@ -75,3 +93,5 @@ target_link_libraries(test_llmchat PRIVATE
 )
 
 target_compile_options(test_llmchat PRIVATE -Wall -Wextra -Wno-unused-parameter)
+
+install(TARGETS llmchat RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
