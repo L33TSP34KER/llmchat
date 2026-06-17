@@ -112,39 +112,51 @@ static void write_sample_config(const std::string& path) {
         "\n"
         "## Core rules\n"
         "- Be concise and direct. Write clean, idiomatic code.\n"
-        "- Always read a file before editing it.\n"
-        "- Use write_file for new files or rewrites. Use edit_file for targeted changes.\n"
-        "- After writing or editing, verify with read_file or a quick terminal command.\n"
-        "- When ambiguous, use tools to investigate before asking.\n"
+        "- Always read a file before editing it \xe2\x80\x94 you need to know the current content.\n"
+        "- Use write_file for creating new files or complete rewrites. Use edit_file for targeted changes.\n"
+        "- After writing or editing, verify the result with read_file or a quick terminal command.\n"
+        "- When the user gives an ambiguous request, use tools to investigate rather than asking for clarification.\n"
         "- When the user tells you personal information (name, location, preferences, facts about themselves), automatically save it to memory using save_memory so you can remember it later.\n"
         "\n"
-        "## Local tools\n"
-        "- terminal — shell commands\n"
-        "- read_file / write_file / edit_file — file operations\n"
-        "- save_memory / get_memory / list_memories / delete_memory — persistence\n"
+        "## Available tools\n"
+        "- terminal \xe2\x80\x94 execute shell commands (build, test, grep, git, etc.)\n"
+        "- read_file \xe2\x80\x94 read any file\n"
+        "- write_file \xe2\x80\x94 create or overwrite a file\n"
+        "- edit_file \xe2\x80\x94 find and replace specific text in an existing file\n"
+        "- save_memory / get_memory / list_memories / delete_memory \xe2\x80\x94 persistent key-value storage across sessions\n"
+        "- search_arxiv \xe2\x80\x94 search scientific papers on arXiv.org\n"
+        "- fetch_arxiv_paper \xe2\x80\x94 fetch details of a specific arXiv paper by ID\n"
+        "- fetch_web_page \xe2\x80\x94 fetch a web page and convert it to clean markdown/text\n"
         "\n"
-        "## Web tools\n"
-        "- search_arxiv — search scientific papers on arXiv.org\n"
-        "- fetch_arxiv_paper — fetch details of a specific arXiv paper by ID\n"
-        "- fetch_web_page — fetch a web page and convert it to clean markdown/text (strips HTML, CSS, JS)\n"
-        "\n"
-        "Be decisive and solve problems end-to-end.";
-    j["theme"] = "default";
+        "Be decisive and solve problems end-to-end. Only ask for help when your tools can't provide the answer.";
+    j["theme"] = "rose-pine";
     j["current_skill"] = "";
     j["include_tools_in_context"] = true;
     j["slot_machine_animation"] = false;
-    j["animation_speed"] = 50;
+    j["animation_speed"] = 30;
     j["casino_status_bar"] = false;
     j["context_compression"] = false;
     j["max_context_chars"] = 80000;
-    j["max_thinking_tokens"] = 0;
+    j["max_thinking_tokens"] = 250;
     j["force_tool_use"] = false;
     j["hide_tool_results"] = false;
     j["temperature_override"] = -1.0;
     j["auto_name_conversations"] = true;
     j["agentic_mode"] = false;
-    j["agentic_coder_prompt"] = "";
-    j["agentic_checker_prompt"] = "";
+    j["agentic_coder_prompt"] = "You are an autonomous coding agent working on a task.\n\n"
+        "Original task: {task}\n\n"
+        "You have full access to tools (terminal, file operations, memory, arxiv, web fetch).\n"
+        "Work thoroughly. Use tools to investigate, code, test, and verify.\n"
+        "When you believe the task is done, end with: AGENT_CHECK\n\n"
+        "Previous instructions from the verifier (if any):\n{instructions}";
+    j["agentic_checker_prompt"] = "You are a task completion verifier. Review the original task and all work done so far. "
+        "Determine if the task is fully completed.\n\n"
+        "Criteria:\n"
+        "- Every requirement of the task must be met\n"
+        "- Code must compile and tests must pass\n"
+        "- All edge cases should be handled\n\n"
+        "Respond with exactly 'TASK COMPLETE' if fully done. "
+        "Otherwise explain specifically what remains and why.";
 
     json tools_arr = json::array();
 
@@ -218,7 +230,26 @@ static void write_sample_config(const std::string& path) {
 
     j["tools"] = tools_arr;
     j["mcp_servers"] = json::array();
-    j["skills"] = json::array();
+
+    json skills_arr = json::array();
+
+    json coding_skill;
+    coding_skill["name"] = "coding";
+    coding_skill["system_prompt"] = "You are an expert programming assistant. Write clean, well-documented code.";
+    skills_arr.push_back(coding_skill);
+
+    json creative_skill;
+    creative_skill["name"] = "creative";
+    creative_skill["system_prompt"] = "You are a creative writing assistant. Be imaginative and descriptive.";
+    skills_arr.push_back(creative_skill);
+
+    json review_skill;
+    review_skill["name"] = "review";
+    review_skill["system_prompt"] = "You are a thorough code reviewer. Analyze code for bugs, security issues, "
+        "performance problems, style violations, and improvement opportunities. Be specific and actionable.";
+    skills_arr.push_back(review_skill);
+
+    j["skills"] = skills_arr;
     std::ofstream f(path);
     if (f.is_open()) f << j.dump(2) << std::endl;
 }
