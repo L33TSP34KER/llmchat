@@ -279,6 +279,33 @@ int main(int argc, char* argv[]) {
     cmd_registry.register_command(std::make_unique<TempCommand>());
     cmd_registry.register_command(std::make_unique<ReviewCommand>());
 
+    // Set up onboarding info
+    {
+        ChatUI::OnboardingInfo oi;
+        oi.model_name = config.model;
+        oi.api_endpoint = config.api_endpoint;
+        oi.max_context_chars = config.max_context_chars;
+        oi.tool_count = (int)config.tools.size();
+        oi.skill_count = (int)config.skills.size();
+        oi.streak_days = streak_days;
+        oi.is_first_run = is_first_run;
+
+        // Count memory entries
+        {
+            std::string mem_path = Config::get_config_dir() + "/memory.json";
+            std::ifstream mf(mem_path);
+            if (mf.good()) {
+                try {
+                    json mem;
+                    mf >> mem;
+                    if (mem.is_object()) oi.memory_count = (int)mem.size();
+                } catch (...) {}
+            }
+        }
+
+        ui.set_onboarding(oi);
+    }
+
     UIState uistate;
     uistate.model_name = config.model;
     uistate.conversation_title = config.conversation_title;

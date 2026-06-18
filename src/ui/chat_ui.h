@@ -35,7 +35,20 @@ public:
     ChatUI(Conversation* conv, Config* config);
     ~ChatUI();
 
+    struct OnboardingInfo {
+        std::string model_name;
+        std::string api_endpoint;
+        int max_context_chars = 80000;
+        int tool_count = 0;
+        int skill_count = 0;
+        int memory_count = 0;
+        int streak_days = 0;
+        bool is_first_run = false;
+    };
+
     void run();
+    void set_onboarding(const OnboardingInfo& info);
+    void clear_onboarding();
     void stop();
     void set_state(const UIState& state);
     void set_processing(bool p);
@@ -97,6 +110,9 @@ private:
     std::string esc_buf_;
 
     int anim_frame_ = 0;
+
+    OnboardingInfo onboarding_info_;
+    bool has_onboarding_ = false;
 
     void init_ncurses();
     void cleanup_ncurses();

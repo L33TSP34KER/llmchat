@@ -23,6 +23,7 @@ add_executable(llmchat
     src/ui/chat_ui.cpp
     src/ui/renderer.cpp
     src/ui/animation.cpp
+    src/ui/onboarding.cpp
     src/ui/text_util.cpp
     src/ui/markdown.cpp
     src/commands/command_registry.cpp

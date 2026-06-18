@@ -1,4 +1,5 @@
 #include "chat_ui.h"
+#include "onboarding.h"
 #include <algorithm>
 #include <cctype>
 #include <cstring>
@@ -116,6 +117,15 @@ void ChatUI::destroy_windows() {
     if (input_win_) delwin(input_win_);
     if (status_win_) delwin(status_win_);
     top_win_ = chat_win_ = input_win_ = status_win_ = nullptr;
+}
+
+void ChatUI::set_onboarding(const OnboardingInfo& info) {
+    onboarding_info_ = info;
+    has_onboarding_ = true;
+}
+
+void ChatUI::clear_onboarding() {
+    has_onboarding_ = false;
 }
 
 void ChatUI::set_status_text(const std::string& text) {
@@ -633,6 +643,20 @@ void ChatUI::scroll_down(int lines) {
 
 void ChatUI::run() {
     init_ncurses();
+
+    if (has_onboarding_) {
+        Onboarding::Info oi;
+        oi.model_name = onboarding_info_.model_name;
+        oi.api_endpoint = onboarding_info_.api_endpoint;
+        oi.max_context_chars = onboarding_info_.max_context_chars;
+        oi.tool_count = onboarding_info_.tool_count;
+        oi.skill_count = onboarding_info_.skill_count;
+        oi.memory_count = onboarding_info_.memory_count;
+        oi.streak_days = onboarding_info_.streak_days;
+        oi.is_first_run = onboarding_info_.is_first_run;
+        has_onboarding_ = false;
+        Onboarding::show(oi);
+    }
 
     auto last_frame = std::chrono::steady_clock::now();
     const auto frame_duration = std::chrono::milliseconds(theme_.animation_speed);
