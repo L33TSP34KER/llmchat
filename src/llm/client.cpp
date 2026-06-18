@@ -968,7 +968,16 @@ std::string LlmClient::build_payload(const std::vector<Message>& history, bool i
         }
 
         if (config_->max_thinking_tokens > 0) {
-            j["thinking"] = {{"budget_tokens", config_->max_thinking_tokens}};
+            std::string model_lower;
+            for (auto& c : config_->model) model_lower += std::tolower(c);
+            // Only send thinking to models known to support it
+            bool supports_thinking = false;
+            if (model_lower.find("claude") != std::string::npos) supports_thinking = true;
+            if (model_lower.find("deepseek") != std::string::npos && model_lower.find("r1") != std::string::npos) supports_thinking = true;
+            if (model_lower.find("o1") != std::string::npos || model_lower.find("o3") != std::string::npos) supports_thinking = true;
+            if (supports_thinking) {
+                j["thinking"] = {{"budget_tokens", config_->max_thinking_tokens}};
+            }
         }
 
         return j.dump();
