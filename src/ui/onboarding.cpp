@@ -244,17 +244,12 @@ bool Onboarding::show(const Info& info) {
     if (box_x < 2) { box_x = 2; box_w = term_w - 4; }
     int box_y = BANNER_LINES + 3;
 
-    auto start_time = std::chrono::steady_clock::now();
-    const auto timeout = std::chrono::seconds(12);
-
     curs_set(0);
     nodelay(stdscr, TRUE);
 
     int frame = 0;
 
     while (true) {
-        if (std::chrono::steady_clock::now() - start_time >= timeout) break;
-
         int ch = wgetch(stdscr);
         if (ch != ERR) {
             if (ch == 'q' || ch == 'Q') break;
@@ -293,12 +288,8 @@ bool Onboarding::show(const Info& info) {
             int ix = (int)inst.x;
             int iy = (int)inst.y;
 
-            // Draw animal in dim color, slightly brighter if idle
             int anim_pair = CP_ANIMAL;
             int anim_attr = A_DIM;
-            if (inst.phase % 40 < 5) {
-                anim_attr = A_NORMAL;
-            }
 
             for (int li = 0; li < spr.height; li++) {
                 int ly = iy + li;
