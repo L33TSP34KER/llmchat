@@ -38,6 +38,7 @@ public:
     struct OnboardingInfo {
         std::string model_name;
         std::string api_endpoint;
+        std::string api_key;
         int max_context_chars = 80000;
         int tool_count = 0;
         int skill_count = 0;
@@ -47,6 +48,8 @@ public:
         std::string model_id;
         int64_t n_params = 0;
         int64_t n_ctx_train = 0;
+        std::vector<std::string> available_models;
+        std::function<void(const std::string&)> on_model_selected;
     };
 
     void run();

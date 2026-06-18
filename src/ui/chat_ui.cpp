@@ -657,6 +657,8 @@ void ChatUI::run() {
         oi.model_stats.model_id = onboarding_info_.model_id;
         oi.model_stats.n_params = onboarding_info_.n_params;
         oi.model_stats.n_ctx_train = onboarding_info_.n_ctx_train;
+        oi.available_models = onboarding_info_.available_models;
+        oi.on_model_selected = onboarding_info_.on_model_selected;
         has_onboarding_ = false;
         Onboarding::show(oi);
     }

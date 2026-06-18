@@ -304,11 +304,16 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        // Fetch model stats from /v1/models
-        auto ms = Onboarding::fetch_model_stats(config.api_endpoint, config.api_key);
-        oi.model_id = ms.model_id;
-        oi.n_params = ms.n_params;
-        oi.n_ctx_train = ms.n_ctx_train;
+        // Fetch model list from /v1/models
+        auto mr = Onboarding::fetch_models(config.api_endpoint, config.api_key);
+        oi.model_id = mr.first_id;
+        oi.n_params = mr.first_n_params;
+        oi.n_ctx_train = mr.first_n_ctx_train;
+        oi.available_models = mr.ids;
+        oi.on_model_selected = [&](const std::string& selected) {
+            config.model = selected;
+            config.save();
+        };
 
         ui.set_onboarding(oi);
     }

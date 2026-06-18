@@ -21,18 +21,16 @@ static const char* banner[] = {
 };
 static constexpr int BANNER_LINES = 6;
 
-// ---- Fetch model stats from /v1/models ----
-Onboarding::ModelStats Onboarding::fetch_model_stats(const std::string& api_endpoint, const std::string& api_key) {
-    ModelStats stats;
-    if (api_endpoint.empty()) return stats;
+// ---- Fetch models from /v1/models ----
+Onboarding::ModelsResponse Onboarding::fetch_models(const std::string& api_endpoint, const std::string& api_key) {
+    ModelsResponse resp_data;
+    if (api_endpoint.empty()) return resp_data;
 
-    // Derive /v1/models URL from chat completions endpoint
     std::string url = api_endpoint;
     size_t pos = url.find("/chat/completions");
     if (pos != std::string::npos) {
         url.replace(pos, 17, "/models");
     } else {
-        // Try stripping last path segment
         pos = url.rfind('/');
         if (pos != std::string::npos && pos > 8) url = url.substr(0, pos);
         url += "/models";
@@ -45,23 +43,30 @@ Onboarding::ModelStats Onboarding::fetch_model_stats(const std::string& api_endp
         client.set_header("Authorization", "Bearer " + api_key);
     }
     auto resp = client.perform();
-    if (resp.status_code != 200) return stats;
+    if (resp.status_code != 200) return resp_data;
 
     try {
         json j = json::parse(resp.body);
         if (j.contains("data") && j["data"].is_array() && !j["data"].empty()) {
-            auto& model = j["data"][0];
-            if (model.contains("id")) stats.model_id = model["id"].get<std::string>();
-            if (model.contains("meta") && model["meta"].is_object()) {
-                auto& meta = model["meta"];
-                if (meta.contains("n_params")) stats.n_params = meta["n_params"].get<int64_t>();
-                if (meta.contains("n_ctx_train")) stats.n_ctx_train = meta["n_ctx_train"].get<int64_t>();
-                if (meta.contains("size")) stats.model_size = meta["size"].get<int64_t>();
+            for (auto& m : j["data"]) {
+                if (m.contains("id")) {
+                    std::string mid = m["id"].get<std::string>();
+                    resp_data.ids.push_back(mid);
+                }
+            }
+            if (!resp_data.ids.empty()) {
+                resp_data.first_id = resp_data.ids[0];
+                auto& first = j["data"][0];
+                if (first.contains("meta") && first["meta"].is_object()) {
+                    auto& meta = first["meta"];
+                    if (meta.contains("n_params")) resp_data.first_n_params = meta["n_params"].get<int64_t>();
+                    if (meta.contains("n_ctx_train")) resp_data.first_n_ctx_train = meta["n_ctx_train"].get<int64_t>();
+                }
             }
         }
     } catch (...) {}
 
-    return stats;
+    return resp_data;
 }
 
 // ---- Animals ----
@@ -254,16 +259,13 @@ bool Onboarding::show(const Info& info) {
         double x = (double)(rand() % (term_w + 60)) - 30;
         double y = (double)(rand() % (term_h - 10)) + 1;
         if (si == 3 || si == 11) {
-            // Fish and snake stay near bottom/middle
             y = (double)(term_h - 8) + (rand() % 4) - 2;
         }
         instances.push_back({
-            si,
-            x, y,
+            si, x, y,
             (double)(rand() % 3 + 1) * 0.15 * (rand() % 2 == 0 ? 1.0 : -1.0),
             (double)(rand() % 3) * 0.05 - 0.05,
-            rand() % 20,
-            rand() % 100
+            rand() % 20, rand() % 100
         });
     }
 
@@ -275,37 +277,17 @@ bool Onboarding::show(const Info& info) {
         stars.push_back({rand() % term_w, rand() % term_h, rand() % 100});
     }
 
-    // Build box content
     auto trunc = [](const std::string& s, int n) {
         return s.size() <= (size_t)n ? s : s.substr(0, n - 1) + "\xe2\x80\xa6";
     };
-    std::string model_s = info.model_name.empty() ? "none" : trunc(info.model_name, 20);
-    std::string ep_s    = info.api_endpoint.empty() ? "none" : trunc(info.api_endpoint, 26);
-    std::string ctx_s = std::to_string(info.max_context_chars) + " tok";
 
-    // Format n_params
-    std::string params_s;
-    auto np = info.model_stats.n_params;
-    if (np > 0) {
-        if (np >= 1000000000) {
-            double b = (double)np / 1000000000.0;
-            char buf[16];
-            snprintf(buf, sizeof(buf), "%.1fB", b);
-            params_s = buf;
-        } else if (np >= 1000000) {
-            double m = (double)np / 1000000.0;
-            char buf[16];
-            snprintf(buf, sizeof(buf), "%.0fM", m);
-            params_s = buf;
-        } else {
-            params_s = std::to_string(np);
-        }
-    }
-
-    // Format model_id
-    std::string mid_s;
-    if (!info.model_stats.model_id.empty()) {
-        mid_s = trunc(info.model_stats.model_id, 20);
+    // Determine if we have a model picker
+    bool has_picker = !info.available_models.empty() && info.on_model_selected;
+    auto& models = info.available_models;
+    int sel_idx = 0;
+    // Try to find current model in list
+    for (int i = 0; i < (int)models.size(); i++) {
+        if (models[i] == info.model_name) { sel_idx = i; break; }
     }
 
     int box_w = 52;
@@ -317,18 +299,30 @@ bool Onboarding::show(const Info& info) {
     nodelay(stdscr, TRUE);
 
     int frame = 0;
+    int model_list_top = box_y + 10;
+    int max_visible_models = term_h - model_list_top - 4;
+    if (max_visible_models < 3) max_visible_models = 3;
 
     while (true) {
         int ch = wgetch(stdscr);
         if (ch != ERR) {
-            if (ch == 'q' || ch == 'Q') break;
-            break;
+            if (has_picker && (ch == KEY_UP || ch == KEY_DOWN)) {
+                if (ch == KEY_UP && sel_idx > 0) sel_idx--;
+                if (ch == KEY_DOWN && sel_idx < (int)models.size() - 1) sel_idx++;
+            } else if (has_picker && (ch == '\n' || ch == '\r' || ch == KEY_ENTER)) {
+                if (info.on_model_selected && sel_idx < (int)models.size()) {
+                    info.on_model_selected(models[sel_idx]);
+                }
+                break;
+            } else if (ch == 'q' || ch == 'Q' || ch == 27) {
+                break;
+            } else {
+                break;
+            }
         }
 
-        // Background fill
-        for (int y = 0; y < term_h; y++) {
-            mvhline(y, 0, ' ', term_w);
-        }
+        // Background
+        for (int y = 0; y < term_h; y++) mvhline(y, 0, ' ', term_w);
 
         // Stars
         for (auto& s : stars) {
@@ -342,28 +336,17 @@ bool Onboarding::show(const Info& info) {
             inst.counter++;
             if (inst.counter < 3) continue;
             inst.counter = 0;
-
-            inst.x += inst.vx;
-            inst.y += inst.vy;
-            inst.phase++;
-
-            // Wrap: if too far left, appear on right; if too far right, go left
+            inst.x += inst.vx; inst.y += inst.vy; inst.phase++;
             const auto& spr = animals[inst.sprite_idx];
             if (inst.x > term_w + 10)  inst.x = -(double)spr.width - 5;
             if (inst.x < -(double)spr.width - 10) inst.x = (double)term_w + 5;
             if (inst.y > term_h) inst.y = -3;
             if (inst.y < -5)     inst.y = (double)(term_h / 2);
-
-            int ix = (int)inst.x;
-            int iy = (int)inst.y;
-
-            int anim_pair = CP_ANIMAL;
-            int anim_attr = A_DIM;
-
+            int ix = (int)inst.x, iy = (int)inst.y;
             for (int li = 0; li < spr.height; li++) {
                 int ly = iy + li;
                 if (ly < 0 || ly >= term_h) continue;
-                draw_str(ly, ix, spr.chars[li], anim_pair, anim_attr);
+                draw_str(ly, ix, spr.chars[li], CP_ANIMAL, A_DIM);
             }
         }
 
@@ -381,9 +364,23 @@ bool Onboarding::show(const Info& info) {
             int sx = (term_w - sw) / 2;
             int sc = (frame / 6) % 2 ? CP_ACCENT : CP_BOX_BORDER;
             if (sx >= 0 && sy < term_h) {
-                std::string line = std::string("\xe2\x95\x94") + sep + "\xe2\x95\x97";
-                draw_str(sy, sx, line.c_str(), sc);
+                draw_str(sy, sx, (std::string("\xe2\x95\x94") + sep + "\xe2\x95\x97").c_str(), sc);
             }
+        }
+
+        // Current selection info
+        std::string cur_model_s = (sel_idx >= 0 && sel_idx < (int)models.size()) ? trunc(models[sel_idx], 20) : info.model_name;
+        std::string ep_s = info.api_endpoint.empty() ? "none" : trunc(info.api_endpoint, 26);
+
+        // Format n_params for selected model
+        std::string params_s;
+        auto np = (sel_idx == 0 || models.empty()) ? info.model_stats.n_params : 0;
+        if (np > 0) {
+            if (np >= 1000000000) {
+                char buf[16]; snprintf(buf, sizeof(buf), "%.1fB", (double)np / 1000000000.0); params_s = buf;
+            } else if (np >= 1000000) {
+                char buf[16]; snprintf(buf, sizeof(buf), "%.0fM", (double)np / 1000000.0); params_s = buf;
+            } else { params_s = std::to_string(np); }
         }
 
         // Info box
@@ -395,44 +392,104 @@ bool Onboarding::show(const Info& info) {
                     int lw = (int)strlen(label);
                     int vx = box_x + 2 + lw + 1;
                     draw_str(box_y + yy, vx, val.c_str(), CP_VALUE);
-                    int rbx = box_x + box_w - 1;
-                    draw_str(box_y + yy, rbx, "\xe2\x95\x91", CP_BOX_BORDER);
+                    draw_str(box_y + yy, box_x + box_w - 1, "\xe2\x95\x91", CP_BOX_BORDER);
                 };
 
                 std::string top;
                 for (int i = 0; i < box_w - 2; i++) top += "\xe2\x95\x90";
                 draw_str(box_y - 1, box_x, (std::string("\xe2\x95\x94") + top + "\xe2\x95\x97").c_str(), CP_BOX_BORDER);
 
-                row(0, "MODEL",    model_s);
-                row(1, "PARAMS",   params_s.empty() ? "fetching..." : params_s);
+                row(0, "MODEL",    cur_model_s);
+                row(1, "PARAMS",   params_s.empty() ? "-" : params_s);
                 row(2, "CTX",      "30976");
                 row(3, "ENDPOINT", ep_s);
                 row(4, "TOOLS",    std::to_string(info.tool_count));
                 row(5, "SKILLS",   std::to_string(info.skill_count));
                 row(6, "MEMORY",   std::to_string(info.memory_count) + " items");
-                row(7, "FILE",     mid_s.empty() ? "-" : mid_s);
+                row(7, "FILE",     info.model_stats.model_id.empty() ? "-" : trunc(info.model_stats.model_id, 20));
 
                 std::string bot;
                 for (int i = 0; i < box_w - 2; i++) bot += "\xe2\x95\x90";
                 draw_str(box_y + num_rows - 1, box_x, (std::string("\xe2\x95\x9a") + bot + "\xe2\x95\x9d").c_str(), CP_BOX_BORDER);
-
-                if (info.streak_days > 0) {
-                    int sy = box_y + num_rows + 1;
-                    if (sy < term_h) {
-                        std::string streak = "\xe2\x9a\xa1  " + std::to_string(info.streak_days) + " day streak";
-                        draw_centered(sy, term_w, streak.c_str(), CP_ACCENT, A_BOLD);
-                    }
-                }
-                if (info.is_first_run) {
-                    int fy = box_y + num_rows + 2;
-                    if (fy < term_h)
-                        draw_centered(fy, term_w, "welcome to llmchat", CP_LABEL, A_DIM);
-                }
             }
         }
 
-        // Prompt
+        // Streak + welcome
         {
+            int sy = box_y + 9;
+            if (info.streak_days > 0 && sy < term_h)
+                draw_centered(sy, term_w, ("\xe2\x9a\xa1  " + std::to_string(info.streak_days) + " day streak").c_str(), CP_ACCENT, A_BOLD);
+        }
+
+        // ---- Model picker list ----
+        if (has_picker) {
+            int list_h = (int)models.size();
+            int scroll = 0;
+            if (sel_idx >= max_visible_models) scroll = sel_idx - max_visible_models + 1;
+            int visible = std::min(list_h - scroll, max_visible_models);
+            if (visible < 1) visible = 1;
+
+            int py = model_list_top;
+            int list_w = std::min(term_w - 4, 56);
+            int lx = (term_w - list_w) / 2;
+            if (lx < 2) lx = 2;
+
+            // Box top
+            std::string t;
+            for (int i = 0; i < list_w - 2; i++) t += "\xe2\x95\x90";
+            draw_str(py - 1, lx, (std::string("\xe2\x95\x94") + " MODELS " + t.substr(7)).c_str(), CP_BOX_BORDER);
+
+            for (int i = 0; i < visible; i++) {
+                int mi = scroll + i;
+                std::string line = "\xe2\x95\x91";
+                if (mi == sel_idx) {
+                    line += " \xe2\x96\xb6 ";
+                    int label_w = list_w - 6;
+                    std::string label = trunc(models[mi], label_w);
+                    line += label;
+                    int pad = list_w - 4 - (int)label.size();
+                    if (pad > 0) line += std::string(pad, ' ');
+                    line += "\xe2\x95\x91";
+                    draw_str(py + i, lx, line.c_str(), CP_ACCENT, A_REVERSE | A_BOLD);
+                } else {
+                    line += "   ";
+                    int label_w = list_w - 5;
+                    std::string label = trunc(models[mi], label_w);
+                    line += label;
+                    int pad = list_w - 5 - (int)label.size();
+                    if (pad > 0) line += std::string(pad, ' ');
+                    line += "\xe2\x95\x91";
+                    draw_str(py + i, lx, line.c_str(), CP_VALUE);
+                }
+            }
+
+            // Fill remaining visible rows with empty lines
+            for (int i = visible; i < max_visible_models; i++) {
+                std::string empty = "\xe2\x95\x91";
+                empty += std::string(list_w - 2, ' ');
+                empty += "\xe2\x95\x91";
+                draw_str(py + i, lx, empty.c_str(), CP_BOX_BORDER);
+            }
+
+            // Box bottom
+            std::string b;
+            for (int i = 0; i < list_w - 2; i++) b += "\xe2\x95\x90";
+            draw_str(py + max_visible_models, lx, (std::string("\xe2\x95\x9a") + b + "\xe2\x95\x9d").c_str(), CP_BOX_BORDER);
+
+            // Hint
+            int hy = py + max_visible_models + 1;
+            if (hy < term_h)
+                draw_centered(hy, term_w, "\xe2\x86\x91\xe2\x86\x93 select  \xe2\x86\xb5 confirm", CP_LABEL, A_DIM);
+
+            // Override prompt
+            int py2 = term_h - 2;
+            if (py2 > hy + 1) {
+                int pulse = (frame / 6) % 20;
+                draw_centered(py2, term_w, "\xe2\x96\xb6  PRESS ANY KEY TO SKIP  \xe2\x97\x80",
+                    CP_PROMPT, pulse < 12 ? A_BOLD : A_NORMAL);
+            }
+        } else {
+            // Prompt
             int py = term_h - 2;
             if (py > 0) {
                 int pulse = (frame / 6) % 20;
@@ -442,8 +499,7 @@ bool Onboarding::show(const Info& info) {
         }
 
         // Scan line
-        int scan_y = (frame / 3) % term_h;
-        mvchgat(scan_y, 0, term_w, A_UNDERLINE, CP_ACCENT, NULL);
+        mvchgat((frame / 3) % term_h, 0, term_w, A_UNDERLINE, CP_ACCENT, NULL);
 
         wnoutrefresh(stdscr);
         doupdate();
