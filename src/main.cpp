@@ -280,6 +280,11 @@ int main(int argc, char* argv[]) {
     cmd_registry.register_command(std::make_unique<TempCommand>());
     cmd_registry.register_command(std::make_unique<ReviewCommand>());
 
+    UIState uistate;
+    uistate.model_name = config.model;
+    uistate.conversation_title = config.conversation_title;
+    ui.set_state(uistate);
+
     // Set up onboarding info
     {
         ChatUI::OnboardingInfo oi;
@@ -313,15 +318,12 @@ int main(int argc, char* argv[]) {
         oi.on_model_selected = [&](const std::string& selected) {
             config.model = selected;
             config.save();
+            uistate.model_name = selected;
+            ui.set_state(uistate);
         };
 
         ui.set_onboarding(oi);
     }
-
-    UIState uistate;
-    uistate.model_name = config.model;
-    uistate.conversation_title = config.conversation_title;
-    ui.set_state(uistate);
 
     auto update_context = [&]() {
         uistate.context_used = llm.estimate_total_chars();
