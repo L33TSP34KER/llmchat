@@ -952,8 +952,24 @@ std::string LlmClient::build_payload(const std::vector<Message>& history, bool i
     j["model"] = config_->model;
     j["stream"] = true;
 
+    // Merge consecutive system messages at the start into one (for Qwen compat)
     json msgs = json::array();
-    for (auto& m : history) msgs.push_back(m.to_json());
+    size_t si = 0;
+    if (!history.empty() && history[0].role == "system") {
+        std::string combined;
+        while (si < history.size() && history[si].role == "system") {
+            if (!combined.empty()) combined += "\n\n";
+            combined += history[si].content;
+            si++;
+        }
+        json sys;
+        sys["role"] = "system";
+        sys["content"] = combined;
+        msgs.push_back(sys);
+    }
+    for (; si < history.size(); si++) {
+        msgs.push_back(history[si].to_json());
+    }
     j["messages"] = msgs;
 
         if (include_tools) {
