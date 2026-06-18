@@ -109,6 +109,13 @@ std::string execute_shell(const ToolDefinition& tool, const std::string& args_js
             std::string val = it.value().dump();
             if (val.size() >= 2 && val.front() == '"' && val.back() == '"')
                 val = val.substr(1, val.size() - 2);
+            // Validate: reject shell injection characters
+            for (char c : val) {
+                if (c == ';' || c == '|' || c == '`' || c == '$' || c == '&'
+                    || c == '\'' || c == '"' || c == '\\') {
+                    return "Error: Invalid character '" + std::string(1, c) + "' in argument '" + it.key() + "'";
+                }
+            }
             size_t pos = 0;
             while ((pos = command.find(placeholder, pos)) != std::string::npos) {
                 command.replace(pos, placeholder.size(), val);

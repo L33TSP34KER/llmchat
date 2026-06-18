@@ -882,7 +882,7 @@ void Renderer::draw_status(bool is_processing,
     wnoutrefresh(status_win_);
 }
 
-void Renderer::draw_topbar(WINDOW* top_win, const std::string& title, int thinking_tokens, int anim_frame) {
+void Renderer::draw_topbar(WINDOW* top_win, const std::string& title, int thinking_tokens, int anim_frame, int context_used, int context_max) {
     int max_x = getmaxx(top_win);
 
     // Fill full bar with background color
@@ -891,15 +891,26 @@ void Renderer::draw_topbar(WINDOW* top_win, const std::string& title, int thinki
     mvwaddstr(top_win, 0, 0, bg.c_str());
     wattroff(top_win, COLOR_PAIR(6));
 
-    // Draw title on the left
+    // Draw context indicator on the far left
+    if (context_max > 0) {
+        int pct = (context_used * 100) / context_max;
+        if (pct > 100) pct = 100;
+        std::string ctx_label = "\xf0\x9f\x93\xa6 " + std::to_string(pct) + "%";
+        wattron(top_win, COLOR_PAIR(7) | A_DIM);
+        mvwaddstr(top_win, 0, 1, ctx_label.c_str());
+        wattroff(top_win, COLOR_PAIR(7) | A_DIM);
+    }
+
+    // Draw title on the left (after context indicator)
     std::string display_title = title.empty() ? "llmchat" : title;
     int max_title_w = max_x - 40;
     if ((int)display_title.size() > max_title_w && max_title_w > 0) {
         display_title = display_title.substr(0, max_title_w - 1) + "\xe2\x80\xa6";
     }
 
+    int title_x = (context_max > 0) ? 10 : 2;
     wattron(top_win, COLOR_PAIR(6) | A_BOLD);
-    mvwaddnstr(top_win, 0, 2, display_title.c_str(), max_x - 4);
+    mvwaddnstr(top_win, 0, title_x, display_title.c_str(), max_x - title_x - 2);
     wattroff(top_win, COLOR_PAIR(6) | A_BOLD);
 
     // Draw thinking button on the right

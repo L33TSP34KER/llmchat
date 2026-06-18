@@ -172,7 +172,7 @@ void ChatUI::draw_all() {
     }
 
     // Draw top bar
-    renderer_.draw_topbar(top_win_, state_.conversation_title, config_->max_thinking_tokens, anim_frame_);
+    renderer_.draw_topbar(top_win_, state_.conversation_title, config_->max_thinking_tokens, anim_frame_, state_.context_used, state_.context_max);
 
     // Create/destroy thinking popup window
     if (thinking_popup_open_ && !thinking_popup_win_) {

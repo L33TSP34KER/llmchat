@@ -19,6 +19,8 @@ struct UIState {
     std::string status_text;
     std::string thinking_phrase;
     std::string conversation_title;
+    int context_used = 0;
+    int context_max = 80000;
 };
 
 class ChatUI {

@@ -97,12 +97,41 @@ int main(int argc, char* argv[]) {
             }
         } else if (arg == "--key" && i + 1 < argc) {
             config.api_key = argv[++i];
+        } else if (arg == "--describe" || arg == "--dump-tools") {
+            json out;
+            json builtins = json::array();
+            builtins.push_back({{"name", "terminal"}, {"type", "builtin"}, {"description", "Execute a shell command in a persistent session"}});
+            builtins.push_back({{"name", "read_file"}, {"type", "builtin"}, {"description", "Read a file from disk"}});
+            builtins.push_back({{"name", "write_file"}, {"type", "builtin"}, {"description", "Write content to a file"}});
+            builtins.push_back({{"name", "edit_file"}, {"type", "builtin"}, {"description", "Find and replace text in a file"}});
+            builtins.push_back({{"name", "save_memory"}, {"type", "builtin"}, {"description", "Save a value to persistent memory"}});
+            builtins.push_back({{"name", "get_memory"}, {"type", "builtin"}, {"description", "Retrieve a value from memory"}});
+            builtins.push_back({{"name", "list_memories"}, {"type", "builtin"}, {"description", "List all saved memories"}});
+            builtins.push_back({{"name", "delete_memory"}, {"type", "builtin"}, {"description", "Delete a memory by key"}});
+            builtins.push_back({{"name", "search_arxiv"}, {"type", "builtin"}, {"description", "Search scientific papers on arXiv.org"}});
+            builtins.push_back({{"name", "fetch_arxiv_paper"}, {"type", "builtin"}, {"description", "Fetch details of a specific arXiv paper"}});
+            builtins.push_back({{"name", "fetch_web_page"}, {"type", "builtin"}, {"description", "Fetch a web page and convert to markdown/text"}});
+            out["builtin_tools"] = builtins;
+            json custom = json::array();
+            for (auto& t : config.tools) {
+                json tj;
+                tj["name"] = t.name;
+                tj["type"] = t.command.empty() ? "builtin" : "shell";
+                tj["description"] = t.description;
+                tj["input_schema"] = t.input_schema;
+                tj["command"] = t.command;
+                custom.push_back(tj);
+            }
+            out["custom_tools"] = custom;
+            std::cout << out.dump(2) << std::endl;
+            return 0;
         } else if (arg == "--help" || arg == "-h") {
             std::cout << "llmchat - LLM Chat Client with ncurses UI\n"
                       << "Usage: llmchat [options]\n"
                       << "  --model <name>      Set model name\n"
                       << "  --endpoint <url>    Set API endpoint\n"
                       << "  --key <key>         Set API key\n"
+                      << "  --describe          Dump tool definitions as JSON\n"
                       << "  --help              Show this help\n";
             return 0;
         }
@@ -255,6 +284,12 @@ int main(int argc, char* argv[]) {
     uistate.conversation_title = config.conversation_title;
     ui.set_state(uistate);
 
+    auto update_context = [&]() {
+        uistate.context_used = llm.estimate_total_chars();
+        uistate.context_max = config.max_context_chars;
+        ui.set_state(uistate);
+    };
+
     // Wire up stream events from LLM to UI
     llm.set_stream_callback([&](const StreamEvent& ev) {
         switch (ev.type) {
@@ -339,7 +374,7 @@ int main(int argc, char* argv[]) {
                 uistate.processing = false;
                 uistate.status_text = "";
                 uistate.thinking_phrase = "";
-                ui.set_state(uistate);
+                update_context();
                 break;
             }
             case StreamEvent::ERROR: {
@@ -473,7 +508,7 @@ int main(int argc, char* argv[]) {
 
         uistate.processing = true;
         uistate.status_text = "";
-        ui.set_state(uistate);
+        update_context();
         llm.enqueue_message(msg, config.current_skill);
     });
 

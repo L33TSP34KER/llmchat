@@ -17,7 +17,7 @@ public:
                      const std::string& model_name, const std::string& status_text,
                      int anim_frame = 0, const std::string& thinking_phrase = "");
 
-    void draw_topbar(WINDOW* top_win, const std::string& title, int thinking_tokens, int anim_frame);
+    void draw_topbar(WINDOW* top_win, const std::string& title, int thinking_tokens, int anim_frame, int context_used = 0, int context_max = 0);
     int compute_total_box_lines(Conversation* conv, int max_x);
 
     static void ncurses_color_to_rgb(int c, float& r, float& g, float& b);
