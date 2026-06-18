@@ -509,7 +509,7 @@ bool Onboarding::show(const Info& info) {
     }
 
     curs_set(1);
-    nodelay(stdscr, FALSE);
+    nodelay(stdscr, TRUE);
     erase();
     refresh();
 
