@@ -1,4 +1,5 @@
 #include "onboarding.h"
+#include "http_client.h"
 #include <ncurses.h>
 #include <algorithm>
 #include <cstdlib>
@@ -19,6 +20,49 @@ static const char* banner[] = {
     "  \xe2\x95\x9a\xe2\x95\x90\xe2\x95\x90\xe2\x95\x90\xe2\x95\x90\xe2\x95\x90\xe2\x95\x9d\xe2\x95\x9a\xe2\x95\x90\xe2\x95\x90\xe2\x95\x90\xe2\x95\x90\xe2\x95\x90\xe2\x95\x9d\xe2\x95\x9a\xe2\x95\x90\xe2\x95\x9d \xe2\x95\x9a\xe2\x95\x90\xe2\x95\x9d\xe2\x95\x9a\xe2\x95\x90\xe2\x95\x90\xe2\x95\x90\xe2\x95\x90\xe2\x95\x90\xe2\x95\x9d\xe2\x95\x9a\xe2\x95\x90\xe2\x95\x9d  \xe2\x95\x9a\xe2\x95\x90\xe2\x95\x9d\xe2\x95\x9a\xe2\x95\x90\xe2\x95\x9d  \xe2\x95\x9a\xe2\x95\x90\xe2\x95\x9d \xe2\x95\x9a\xe2\x95\x90\xe2\x95\x90\xe2\x95\x90\xe2\x95\x90\xe2\x95\x90\xe2\x95\x9d \xe2\x95\x9a\xe2\x95\x90\xe2\x95\x9d  ",
 };
 static constexpr int BANNER_LINES = 6;
+
+// ---- Fetch model stats from /v1/models ----
+Onboarding::ModelStats Onboarding::fetch_model_stats(const std::string& api_endpoint, const std::string& api_key) {
+    ModelStats stats;
+    if (api_endpoint.empty()) return stats;
+
+    // Derive /v1/models URL from chat completions endpoint
+    std::string url = api_endpoint;
+    size_t pos = url.find("/chat/completions");
+    if (pos != std::string::npos) {
+        url.replace(pos, 17, "/models");
+    } else {
+        // Try stripping last path segment
+        pos = url.rfind('/');
+        if (pos != std::string::npos && pos > 8) url = url.substr(0, pos);
+        url += "/models";
+    }
+
+    HttpClient client;
+    client.set_url(url);
+    client.set_method("GET");
+    if (!api_key.empty()) {
+        client.set_header("Authorization", "Bearer " + api_key);
+    }
+    auto resp = client.perform();
+    if (resp.status_code != 200) return stats;
+
+    try {
+        json j = json::parse(resp.body);
+        if (j.contains("data") && j["data"].is_array() && !j["data"].empty()) {
+            auto& model = j["data"][0];
+            if (model.contains("id")) stats.model_id = model["id"].get<std::string>();
+            if (model.contains("meta") && model["meta"].is_object()) {
+                auto& meta = model["meta"];
+                if (meta.contains("n_params")) stats.n_params = meta["n_params"].get<int64_t>();
+                if (meta.contains("n_ctx_train")) stats.n_ctx_train = meta["n_ctx_train"].get<int64_t>();
+                if (meta.contains("size")) stats.model_size = meta["size"].get<int64_t>();
+            }
+        }
+    } catch (...) {}
+
+    return stats;
+}
 
 // ---- Animals ----
 struct AnimalSprite {
@@ -239,6 +283,31 @@ bool Onboarding::show(const Info& info) {
     std::string ep_s    = info.api_endpoint.empty() ? "none" : trunc(info.api_endpoint, 26);
     std::string ctx_s = std::to_string(info.max_context_chars) + " tok";
 
+    // Format n_params
+    std::string params_s;
+    auto np = info.model_stats.n_params;
+    if (np > 0) {
+        if (np >= 1000000000) {
+            double b = (double)np / 1000000000.0;
+            char buf[16];
+            snprintf(buf, sizeof(buf), "%.1fB", b);
+            params_s = buf;
+        } else if (np >= 1000000) {
+            double m = (double)np / 1000000.0;
+            char buf[16];
+            snprintf(buf, sizeof(buf), "%.0fM", m);
+            params_s = buf;
+        } else {
+            params_s = std::to_string(np);
+        }
+    }
+
+    // Format model_id
+    std::string mid_s;
+    if (!info.model_stats.model_id.empty()) {
+        mid_s = trunc(info.model_stats.model_id, 20);
+    }
+
     int box_w = 52;
     int box_x = (term_w - box_w) / 2;
     if (box_x < 2) { box_x = 2; box_w = term_w - 4; }
@@ -318,42 +387,47 @@ bool Onboarding::show(const Info& info) {
         }
 
         // Info box
-        if (box_y + 8 < term_h) {
-            auto row = [&](int yy, const char* label, const std::string& val) {
-                draw_str(box_y + yy, box_x, (std::string("\xe2\x95\x91 ") + label).c_str(), CP_ACCENT, A_BOLD);
-                int lw = (int)strlen(label);
-                int vx = box_x + 2 + lw + 1;
-                draw_str(box_y + yy, vx, val.c_str(), CP_VALUE);
-                int rbx = box_x + box_w - 1;
-                draw_str(box_y + yy, rbx, "\xe2\x95\x91", CP_BOX_BORDER);
-            };
+        {
+            int num_rows = 8;
+            if (box_y + num_rows + 2 < term_h) {
+                auto row = [&](int yy, const char* label, const std::string& val) {
+                    draw_str(box_y + yy, box_x, (std::string("\xe2\x95\x91 ") + label).c_str(), CP_ACCENT, A_BOLD);
+                    int lw = (int)strlen(label);
+                    int vx = box_x + 2 + lw + 1;
+                    draw_str(box_y + yy, vx, val.c_str(), CP_VALUE);
+                    int rbx = box_x + box_w - 1;
+                    draw_str(box_y + yy, rbx, "\xe2\x95\x91", CP_BOX_BORDER);
+                };
 
-            std::string top;
-            for (int i = 0; i < box_w - 2; i++) top += "\xe2\x95\x90";
-            draw_str(box_y - 1, box_x, (std::string("\xe2\x95\x94") + top + "\xe2\x95\x97").c_str(), CP_BOX_BORDER);
+                std::string top;
+                for (int i = 0; i < box_w - 2; i++) top += "\xe2\x95\x90";
+                draw_str(box_y - 1, box_x, (std::string("\xe2\x95\x94") + top + "\xe2\x95\x97").c_str(), CP_BOX_BORDER);
 
-            row(0, "MODEL",    model_s);
-            row(1, "ENDPOINT", ep_s);
-            row(2, "CONTEXT",  ctx_s);
-            row(3, "TOOLS",    std::to_string(info.tool_count));
-            row(4, "SKILLS",   std::to_string(info.skill_count));
-            row(5, "MEMORY",   std::to_string(info.memory_count) + " items");
+                row(0, "MODEL",    model_s);
+                row(1, "PARAMS",   params_s.empty() ? "fetching..." : params_s);
+                row(2, "CTX",      "30976");
+                row(3, "ENDPOINT", ep_s);
+                row(4, "TOOLS",    std::to_string(info.tool_count));
+                row(5, "SKILLS",   std::to_string(info.skill_count));
+                row(6, "MEMORY",   std::to_string(info.memory_count) + " items");
+                row(7, "FILE",     mid_s.empty() ? "-" : mid_s);
 
-            std::string bot;
-            for (int i = 0; i < box_w - 2; i++) bot += "\xe2\x95\x90";
-            draw_str(box_y + 6, box_x, (std::string("\xe2\x95\x9a") + bot + "\xe2\x95\x9d").c_str(), CP_BOX_BORDER);
+                std::string bot;
+                for (int i = 0; i < box_w - 2; i++) bot += "\xe2\x95\x90";
+                draw_str(box_y + num_rows - 1, box_x, (std::string("\xe2\x95\x9a") + bot + "\xe2\x95\x9d").c_str(), CP_BOX_BORDER);
 
-            if (info.streak_days > 0) {
-                int sy = box_y + 8;
-                if (sy < term_h) {
-                    std::string streak = "\xe2\x9a\xa1  " + std::to_string(info.streak_days) + " day streak";
-                    draw_centered(sy, term_w, streak.c_str(), CP_ACCENT, A_BOLD);
+                if (info.streak_days > 0) {
+                    int sy = box_y + num_rows + 1;
+                    if (sy < term_h) {
+                        std::string streak = "\xe2\x9a\xa1  " + std::to_string(info.streak_days) + " day streak";
+                        draw_centered(sy, term_w, streak.c_str(), CP_ACCENT, A_BOLD);
+                    }
                 }
-            }
-            if (info.is_first_run) {
-                int fy = box_y + 9;
-                if (fy < term_h)
-                    draw_centered(fy, term_w, "welcome to llmchat", CP_LABEL, A_DIM);
+                if (info.is_first_run) {
+                    int fy = box_y + num_rows + 2;
+                    if (fy < term_h)
+                        draw_centered(fy, term_w, "welcome to llmchat", CP_LABEL, A_DIM);
+                }
             }
         }
 

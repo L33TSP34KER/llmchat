@@ -654,6 +654,9 @@ void ChatUI::run() {
         oi.memory_count = onboarding_info_.memory_count;
         oi.streak_days = onboarding_info_.streak_days;
         oi.is_first_run = onboarding_info_.is_first_run;
+        oi.model_stats.model_id = onboarding_info_.model_id;
+        oi.model_stats.n_params = onboarding_info_.n_params;
+        oi.model_stats.n_ctx_train = onboarding_info_.n_ctx_train;
         has_onboarding_ = false;
         Onboarding::show(oi);
     }

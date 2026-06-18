@@ -44,6 +44,9 @@ public:
         int memory_count = 0;
         int streak_days = 0;
         bool is_first_run = false;
+        std::string model_id;
+        int64_t n_params = 0;
+        int64_t n_ctx_train = 0;
     };
 
     void run();

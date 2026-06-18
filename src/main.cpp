@@ -12,6 +12,7 @@
 #include "config.h"
 #include "llm/client.h"
 #include "ui/chat_ui.h"
+#include "ui/onboarding.h"
 #include "conversation.h"
 #include "mcp/manager.h"
 #include "commands/command_registry.h"
@@ -302,6 +303,12 @@ int main(int argc, char* argv[]) {
                 } catch (...) {}
             }
         }
+
+        // Fetch model stats from /v1/models
+        auto ms = Onboarding::fetch_model_stats(config.api_endpoint, config.api_key);
+        oi.model_id = ms.model_id;
+        oi.n_params = ms.n_params;
+        oi.n_ctx_train = ms.n_ctx_train;
 
         ui.set_onboarding(oi);
     }
