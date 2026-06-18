@@ -952,27 +952,60 @@ std::string LlmClient::build_payload(const std::vector<Message>& history, bool i
     j["model"] = config_->model;
     j["stream"] = true;
 
-    // Merge consecutive system messages at the start into one (for Qwen compat)
+    // Detect Qwen models (they have strict Jinja template requirements)
+    std::string model_lower;
+    for (auto& c : config_->model) model_lower += std::tolower(c);
+    bool is_qwen = model_lower.find("qwen") != std::string::npos;
+
     json msgs = json::array();
-    size_t si = 0;
-    if (!history.empty() && history[0].role == "system") {
-        std::string combined;
-        while (si < history.size() && history[si].role == "system") {
-            if (!combined.empty()) combined += "\n\n";
-            combined += history[si].content;
-            si++;
+    if (is_qwen) {
+        // Qwen's auto-generated template fails with system messages.
+        // Collect system content and inject into the last user message.
+        std::string system_content;
+        for (auto& m : history) {
+            if (m.role == "system") {
+                if (!system_content.empty()) system_content += "\n\n";
+                system_content += m.content;
+            }
         }
-        json sys;
-        sys["role"] = "system";
-        sys["content"] = combined;
-        msgs.push_back(sys);
-    }
-    for (; si < history.size(); si++) {
-        msgs.push_back(history[si].to_json());
+        // Find the last user message (the most recent one)
+        int last_user_idx = -1;
+        for (int i = (int)history.size() - 1; i >= 0; i--) {
+            if (history[i].role == "user") { last_user_idx = i; break; }
+        }
+        for (int i = 0; i < (int)history.size(); i++) {
+            if (history[i].role == "system") continue;
+            if (i == last_user_idx && !system_content.empty()) {
+                json u;
+                u["role"] = "user";
+                u["content"] = system_content + "\n\n" + history[i].content;
+                msgs.push_back(u);
+            } else {
+                msgs.push_back(history[i].to_json());
+            }
+        }
+    } else {
+        // Merge consecutive system messages at the start into one
+        size_t si = 0;
+        if (!history.empty() && history[0].role == "system") {
+            std::string combined;
+            while (si < history.size() && history[si].role == "system") {
+                if (!combined.empty()) combined += "\n\n";
+                combined += history[si].content;
+                si++;
+            }
+            json sys;
+            sys["role"] = "system";
+            sys["content"] = combined;
+            msgs.push_back(sys);
+        }
+        for (; si < history.size(); si++) {
+            msgs.push_back(history[si].to_json());
+        }
     }
     j["messages"] = msgs;
 
-        if (include_tools) {
+        if (include_tools && !is_qwen) {
             j["tools"] = config_->get_tools_json();
             if (config_->force_tool_use) {
                 j["tool_choice"] = "required";
